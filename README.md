@@ -52,7 +52,7 @@ An asynchronous iterator is an object that exposes a series of data items by:
 Any object that conforms to the above conditions can be used with the AsyncIterator library
 (this includes [Node.js Streams](https://nodejs.org/api/stream.html)).
 The `AsyncIterator` interface additionally exposes
-[several other methods and properties](http://rubenverborgh.github.io/AsyncIterator/docs/AsyncIterator.html).
+[several other methods and properties](https://rubenverborgh.github.io/AsyncIterator/docs/module-asynciterator.AsyncIterator.html).
 
 ## Example: fetching Wikipedia links related to natural numbers
 In the example below, we create an iterator of links found on Wikipedia pages for natural numbers.
@@ -133,10 +133,10 @@ links.on('readable', () => {
 });
 ```
 
-The [`end` event](http://rubenverborgh.github.io/AsyncIterator/docs/AsyncIterator.html#.event:end) is emitted after you have read the last item from the iterator.
+The [`end` event](https://rubenverborgh.github.io/AsyncIterator/docs/module-asynciterator.html#.event:data) is emitted after you have read the last item from the iterator.
 
 ### Consuming an AsyncIterator in flow mode
-An AsyncIterator can be switched to _flow_ mode by listening to the [`data` event](http://rubenverborgh.github.io/AsyncIterator/docs/AsyncIterator.html#.event:data).
+An AsyncIterator can be switched to _flow_ mode by listening to the [`data` event](https://rubenverborgh.github.io/AsyncIterator/docs/module-asynciterator.html#.event:data).
 In flow mode, iterators generate items as fast as possible.
 
 ```JavaScript
