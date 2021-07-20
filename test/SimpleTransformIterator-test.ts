@@ -7,61 +7,62 @@ import {
   ArrayIterator,
   IntegerIterator,
   scheduleTask,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
+import { expect } from 'chai';
 
 describe('SimpleTransformIterator', () => {
   describe('The SimpleTransformIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new SimpleTransformIterator(); });
+      let instance: SimpleTransformIterator<never, never>;
+      beforeEach(() => { instance = new SimpleTransformIterator(); });
 
       it('should be a SimpleTransformIterator object', () => {
-        instance.should.be.an.instanceof(SimpleTransformIterator);
+        expect(instance).toBeInstanceOf(SimpleTransformIterator);
       });
 
       it('should be a TransformIterator object', () => {
-        instance.should.be.an.instanceof(TransformIterator);
+        expect(instance).toBeInstanceOf(TransformIterator);
       });
 
       it('should be a BufferedIterator object', () => {
-        instance.should.be.an.instanceof(BufferedIterator);
+        expect(instance).toBeInstanceOf(BufferedIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
 
   describe('A SimpleTransformIterator without options', () => {
-    let iterator, source;
-    before(() => {
+    let iterator: SimpleTransformIterator<string, string>, source: ArrayIterator<string>;
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c']);
       iterator = new SimpleTransformIterator(source);
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return items as they are', () => {
-        items.should.deep.equal(['a', 'b', 'c']);
+        expect(items).toEqual(['a', 'b', 'c']);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a map function', () => {
-    let iterator, source, map;
-    before(() => {
+    let iterator: SimpleTransformIterator<string, string>, source: ArrayIterator<string>, map;
+    beforeEach(() => {
       let i = 0;
       source = new ArrayIterator(['a', 'b', 'c']);
       map = sinon.spy(item => item + (++i));
@@ -69,14 +70,14 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should execute the map function on all items in order', () => {
-        items.should.deep.equal(['a1', 'b2', 'c3']);
+        expect(items).toEqual(['a1', 'b2', 'c3']);
       });
 
       it('should have called the map function once for each item', () => {
@@ -84,14 +85,14 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have called the map function with the iterator as `this`', () => {
-        map.alwaysCalledOn(iterator).should.be.true;
+        map.alwaysCalledOn(iterator).toBe(true);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a map function that returns null', () => {
-    let iterator, source, map;
-    before(() => {
+    let iterator: SimpleTransformIterator<string, string>, source: ArrayIterator<string>, map;
+    beforeEach(() => {
       let i = 0;
       source = new ArrayIterator(['a', 'b', 'c']);
       map = sinon.spy(item => {
@@ -103,14 +104,14 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should execute the map function on all items in order, skipping null', () => {
-        items.should.deep.equal(['a1', 'c3']);
+        expect(items).toEqual(['a1', 'c3']);
       });
 
       it('should have called the map function once for each item', () => {
@@ -118,14 +119,14 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have called the map function with the iterator as `this`', () => {
-        map.alwaysCalledOn(iterator).should.be.true;
+        map.alwaysCalledOn(iterator).toBe(true);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a transform function', () => {
-    let iterator, source, transform;
-    before(() => {
+    let iterator: SimpleTransformIterator<string, string>, source: ArrayIterator<string>, transform;
+    beforeEach(() => {
       let i = 0;
       source = new ArrayIterator(['a', 'b', 'c']);
       transform = sinon.spy(function (item, done) {
@@ -136,14 +137,14 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should execute the transform function on all items in order', () => {
-        items.should.deep.equal(['a1', 'b2', 'c3']);
+        expect(items).toEqual(['a1', 'b2', 'c3']);
       });
 
       it('should have called the transform function once for each item', () => {
@@ -151,14 +152,14 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have called the transform function with the iterator as `this`', () => {
-        transform.alwaysCalledOn(iterator).should.be.true;
+        transform.alwaysCalledOn(iterator).toBe(true);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a transform function as only option', () => {
     let iterator, source, transform;
-    before(() => {
+    beforeEach(() => {
       let i = 0;
       source = new ArrayIterator(['a', 'b', 'c']);
       transform = sinon.spy(function (item, done) {
@@ -169,14 +170,14 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should execute the transform function on all items in order', () => {
-        items.should.deep.equal(['a1', 'b2', 'c3']);
+        expect(items).toEqual(['a1', 'b2', 'c3']);
       });
 
       it('should have called the transform function once for each item', () => {
@@ -184,14 +185,14 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have called the transform function with the iterator as `this`', () => {
-        transform.alwaysCalledOn(iterator).should.be.true;
+        transform.alwaysCalledOn(iterator).toBe(true);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a transform function that skips many items', () => {
     let iterator, source, transform, i = 1;
-    before(() => {
+    beforeEach(() => {
       source = new AsyncIterator();
       source.read = sinon.spy(() => i++);
       transform = function (item, done) {
@@ -209,30 +210,30 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after reading a first item', () => {
       let item;
-      before(() => {
+      beforeEach(() => {
         item = iterator.read();
       });
 
       it('should read the correct item', () => {
-        item.should.equal(10);
+        expect(item).toEqual(10);
       });
 
       it('should have called `read` on the source until it had sufficient items', () => {
@@ -240,26 +241,26 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after reading a second item', () => {
       let item;
-      before(() => {
+      beforeEach(() => {
         item = iterator.read();
       });
 
       it('should read the correct item', () => {
-        item.should.equal(20);
+        expect(item).toEqual(20);
       });
 
       it('should have called `read` on the source until it had sufficient items', () => {
@@ -267,22 +268,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a transform function that closes', () => {
     let iterator, source, transform;
-    before(() => {
+    beforeEach(() => {
       source = new AsyncIterator();
       source.read = sinon.spy(() => 1);
       transform = function (item, done) {
@@ -300,30 +301,30 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after reading a first item', () => {
       let item;
-      before(() => {
+      beforeEach(() => {
         item = iterator.read();
       });
 
       it('should read the correct item', () => {
-        item.should.equal(1);
+        expect(item).toEqual(1);
       });
 
       it('should have called `read` on the source only once', () => {
@@ -331,36 +332,36 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a filter function', () => {
     let iterator, source, filter;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c']);
       filter = sinon.spy(item => item !== 'b');
       iterator = new SimpleTransformIterator(source, { filter });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should execute the filter function on all items in order', () => {
-        items.should.deep.equal(['a', 'c']);
+        expect(items).toEqual(['a', 'c']);
       });
 
       it('should have called the filter function once for each item', () => {
@@ -368,14 +369,14 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have called the filter function with the iterator as `this`', () => {
-        filter.alwaysCalledOn(iterator).should.be.true;
+        filter.alwaysCalledOn(iterator).toBe(true);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a prepend array', () => {
     let iterator, source, prepend;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c']);
       prepend = ['i', 'ii', 'iii'];
       iterator = new SimpleTransformIterator(source, { prepend });
@@ -383,63 +384,63 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should prepend the items to the regular items', () => {
-        items.should.deep.equal(['i', 'ii', 'iii', 'a', 'b', 'c']);
+        expect(items).toEqual(['i', 'ii', 'iii', 'a', 'b', 'c']);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a prepend iterator', () => {
     let iterator, source, prepend;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c']);
       prepend = new ArrayIterator(['i', 'ii', 'iii']);
       iterator = new SimpleTransformIterator(source, { prepend });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should prepend the items to the regular items', () => {
-        items.should.deep.equal(['i', 'ii', 'iii', 'a', 'b', 'c']);
+        expect(items).toEqual(['i', 'ii', 'iii', 'a', 'b', 'c']);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a prepend iterator that ended', () => {
     let iterator, source, prepend;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c']);
       prepend = new EmptyIterator();
       iterator = new SimpleTransformIterator(source, { prepend });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return items as they are', () => {
-        items.should.deep.equal(['a', 'b', 'c']);
+        expect(items).toEqual(['a', 'b', 'c']);
       });
     });
   });
 
   describe('A SimpleTransformIterator with an append array', () => {
     let iterator, source, append;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c']);
       append = ['I', 'II', 'III'];
       iterator = new SimpleTransformIterator(source, { append });
@@ -447,71 +448,71 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should append the items to the regular items', () => {
-        items.should.deep.equal(['a', 'b', 'c', 'I', 'II', 'III']);
+        expect(items).toEqual(['a', 'b', 'c', 'I', 'II', 'III']);
       });
     });
   });
 
   describe('A SimpleTransformIterator with an append iterator', () => {
     let iterator, source, append;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c']);
       append = new ArrayIterator(['I', 'II', 'III']);
       iterator = new SimpleTransformIterator(source, { append });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should append the items to the regular items', () => {
-        items.should.deep.equal(['a', 'b', 'c', 'I', 'II', 'III']);
+        expect(items).toEqual(['a', 'b', 'c', 'I', 'II', 'III']);
       });
     });
   });
 
   describe('A SimpleTransformIterator with an append iterator that ended', () => {
     let iterator, source, append;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c']);
       append = new EmptyIterator();
       iterator = new SimpleTransformIterator(source, { append });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return items as they are', () => {
-        items.should.deep.equal(['a', 'b', 'c']);
+        expect(items).toEqual(['a', 'b', 'c']);
       });
     });
   });
 
   describe('A SimpleTransformIterator with an offset of 0', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { offset: 0 });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -521,22 +522,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should result in all items', () => {
-        items.should.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        expect(items).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with an offset of 5', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { offset: 5 });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -546,22 +547,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should result in skipping the first 5 items', () => {
-        items.should.deep.equal([6, 7, 8, 9, 10]);
+        expect(items).toEqual([6, 7, 8, 9, 10]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with an offset of +Infinity', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { offset: Infinity, autoStart: false });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -571,22 +572,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should not result in any items', () => {
-        items.should.deep.equal([]);
+        expect(items).toEqual([]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a negative offset', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { offset: -1 });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -596,22 +597,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should result in all items', () => {
-        items.should.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        expect(items).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with an offset of -Infinity', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { offset: -Infinity });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -621,22 +622,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should result in all items', () => {
-        items.should.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        expect(items).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a limit of 0', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { limit: 0, autoStart: false });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -646,22 +647,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should not result in any items', () => {
-        items.should.deep.equal([]);
+        expect(items).toEqual([]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a limit of 5', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { limit: 5 });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -671,22 +672,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should result in the first 5 items', () => {
-        items.should.deep.equal([1, 2, 3, 4, 5]);
+        expect(items).toEqual([1, 2, 3, 4, 5]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a limit of +Infinity', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { limit: Infinity });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -696,22 +697,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should result in all items', () => {
-        items.should.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        expect(items).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a negative limit', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { limit: -1, autoStart: false });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -721,22 +722,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should not result in any items', () => {
-        items.should.deep.equal([]);
+        expect(items).toEqual([]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with a limit of -Infinity', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { limit: -Infinity, autoStart: false });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -746,22 +747,22 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should not result in any items', () => {
-        items.should.deep.equal([]);
+        expect(items).toEqual([]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with an offset of 2 and a limit of 3', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new IntegerIterator({ start: 1, end: 10 });
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator(source, { offset: 2, limit: 3 });
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
@@ -771,14 +772,14 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should result in skipping 2 items and reading 3', () => {
-        items.should.deep.equal([3, 4, 5]);
+        expect(items).toEqual([3, 4, 5]);
       });
     });
   });
 
   describe('A SimpleTransformIterator with offset/limit and a slow source', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new BufferedIterator();
       sinon.spy(source, 'read');
       iterator = new SimpleTransformIterator({ offset: 2, limit: 3 });
@@ -787,115 +788,115 @@ describe('SimpleTransformIterator', () => {
 
     describe('before the source is set', () => {
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after the source is set', () => {
-      before(() => { iterator.source = source; });
+      beforeEach(() => { iterator.source = source; });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after item 1 becomes available', () => {
-      before(() => { source._push('a'); });
+      beforeEach(() => { source._push('a'); });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after item 2 becomes available', () => {
-      before(() => { source._push('b'); });
+      beforeEach(() => { source._push('b'); });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after item 3 becomes available', () => {
-      before(() => { source._push('c'); });
+      beforeEach(() => { source._push('c'); });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should return the item on read', () => {
@@ -903,27 +904,27 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should return null on subsequent reads', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after item 4 becomes available', () => {
-      before(() => { source._push('d'); });
+      beforeEach(() => { source._push('d'); });
 
       it('should have emitted another `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(2);
+        expect((iterator as any)._eventCounts.readable).toEqual(2);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should return the item on read', () => {
@@ -931,27 +932,27 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should return null on subsequent reads', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after item 5 becomes available', () => {
-      before(() => { source._push('e'); });
+      beforeEach(() => { source._push('e'); });
 
       it('should have emitted another `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(3);
+        expect((iterator as any)._eventCounts.readable).toEqual(3);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should return the item on read', () => {
@@ -959,38 +960,38 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should return null on subsequent reads', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after item 5 has been read', () => {
-      before(() => { source._push('f'); });
+      beforeEach(() => { source._push('f'); });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(3);
+        expect((iterator as any)._eventCounts.readable).toEqual(3);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A SimpleTransformIterator with filter/map/prepend/append/offset/limit', () => {
     let iterator, source, filter, map, prepend, append;
-    before(() => {
+    beforeEach(() => {
       let i = 0;
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f', 'g']);
       sinon.spy(source, 'read');
@@ -1005,14 +1006,14 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the processed items', () => {
-        items.should.deep.equal(['i', 'ii', 'iii', 'c1', 'e2', 'f3', 'I', 'II', 'III']);
+        expect(items).toEqual(['i', 'ii', 'iii', 'c1', 'e2', 'f3', 'I', 'II', 'III']);
       });
 
       it('should have called the filter function once for each needed item', () => {
@@ -1028,14 +1029,14 @@ describe('SimpleTransformIterator', () => {
       });
 
       it('should have called the map function with the iterator as `this`', () => {
-        map.alwaysCalledOn(iterator).should.be.true;
+        map.alwaysCalledOn(iterator).toBe(true);
       });
     });
   });
 
   describe('A SimpleTransformIterator with optional set to false', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3, 4, 5, 6]);
       iterator = new SimpleTransformIterator(source, {
         optional: false,
@@ -1049,21 +1050,21 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return items not transformed/mapped into null', () => {
-        items.should.deep.equal(['t1', 't5']);
+        expect(items).toEqual(['t1', 't5']);
       });
     });
   });
 
   describe('A SimpleTransformIterator with optional set to true', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3, 4, 5, 6]);
       iterator = new SimpleTransformIterator(source, {
         optional: true,
@@ -1077,14 +1078,14 @@ describe('SimpleTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items, or if none, the item itself', () => {
-        items.should.deep.equal(['t1', 2, 3, 4, 't5', 6]);
+        expect(items).toEqual(['t1', 2, 3, 4, 't5', 6]);
       });
     });
   });
@@ -1096,7 +1097,7 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, map, result;
-      before(() => {
+      beforeEach(() => {
         let i = 0;
         iterator = new ArrayIterator(['a', 'b', 'c']);
         map = sinon.spy(item => item + (++i));
@@ -1104,8 +1105,8 @@ describe('SimpleTransformIterator', () => {
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1115,7 +1116,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should execute the map function on all items in order', () => {
-          items.should.deep.equal(['a1', 'b2', 'c3']);
+          expect(items).toEqual(['a1', 'b2', 'c3']);
         });
 
         it('should call the map function once for each item', () => {
@@ -1123,7 +1124,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should call the map function with the returned iterator as `this`', () => {
-          map.alwaysCalledOn(result).should.be.true;
+          map.alwaysCalledOn(result).toBe(true);
         });
       });
     });
@@ -1131,7 +1132,7 @@ describe('SimpleTransformIterator', () => {
     describe('when called on an iterator with a `this` argument', () => {
       const self = {};
       let iterator, map, result;
-      before(() => {
+      beforeEach(() => {
         let i = 0;
         iterator = new ArrayIterator(['a', 'b', 'c']);
         map = sinon.spy(item => item + (++i));
@@ -1139,8 +1140,8 @@ describe('SimpleTransformIterator', () => {
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1150,7 +1151,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should execute the map function on all items in order', () => {
-          items.should.deep.equal(['a1', 'b2', 'c3']);
+          expect(items).toEqual(['a1', 'b2', 'c3']);
         });
 
         it('should call the map function once for each item', () => {
@@ -1158,7 +1159,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should call the map function with the passed argument as `this`', () => {
-          map.alwaysCalledOn(self).should.be.true;
+          map.alwaysCalledOn(self).toBe(true);
         });
       });
     });
@@ -1171,15 +1172,15 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, filter, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new ArrayIterator(['a', 'b', 'c']);
         filter = sinon.spy(item => item !== 'b');
         result = iterator.filter(filter);
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1189,7 +1190,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should execute the filter function on all items in order', () => {
-          items.should.deep.equal(['a', 'c']);
+          expect(items).toEqual(['a', 'c']);
         });
 
         it('should call the filter function once for each item', () => {
@@ -1197,7 +1198,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should call the filter function with the returned iterator as `this`', () => {
-          filter.alwaysCalledOn(result).should.be.true;
+          filter.alwaysCalledOn(result).toBe(true);
         });
       });
     });
@@ -1205,15 +1206,15 @@ describe('SimpleTransformIterator', () => {
     describe('when called on an iterator with a `this` argument', () => {
       const self = {};
       let iterator, filter, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new ArrayIterator(['a', 'b', 'c']);
         filter = sinon.spy(item => item !== 'b');
         result = iterator.filter(filter, self);
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1223,7 +1224,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should execute the filter function on all items in order', () => {
-          items.should.deep.equal(['a', 'c']);
+          expect(items).toEqual(['a', 'c']);
         });
 
         it('should call the filter function once for each item', () => {
@@ -1231,7 +1232,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should call the filter function with the passed argument as `this`', () => {
-          filter.alwaysCalledOn(self).should.be.true;
+          filter.alwaysCalledOn(self).toBe(true);
         });
       });
     });
@@ -1244,14 +1245,14 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new ArrayIterator(['a', 'b', 'c']);
         result = iterator.prepend(['i', 'ii', 'iii']);
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1261,7 +1262,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should prepend the items', () => {
-          items.should.deep.equal(['i', 'ii', 'iii', 'a', 'b', 'c']);
+          expect(items).toEqual(['i', 'ii', 'iii', 'a', 'b', 'c']);
         });
       });
     });
@@ -1274,14 +1275,14 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new ArrayIterator(['a', 'b', 'c']);
         result = iterator.append(['I', 'II', 'III']);
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1291,7 +1292,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should append the items', () => {
-          items.should.deep.equal(['a', 'b', 'c', 'I', 'II', 'III']);
+          expect(items).toEqual(['a', 'b', 'c', 'I', 'II', 'III']);
         });
       });
     });
@@ -1304,14 +1305,14 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new ArrayIterator(['a', 'b', 'c']);
         result = iterator.surround(['i', 'ii', 'iii'], ['I', 'II', 'III']);
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1321,7 +1322,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should surround the items', () => {
-          items.should.deep.equal(['i', 'ii', 'iii', 'a', 'b', 'c', 'I', 'II', 'III']);
+          expect(items).toEqual(['i', 'ii', 'iii', 'a', 'b', 'c', 'I', 'II', 'III']);
         });
       });
     });
@@ -1334,14 +1335,14 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new ArrayIterator(['a', 'b', 'c', 'd', 'e']);
         result = iterator.skip(2);
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1351,7 +1352,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should skip the given number of items', () => {
-          items.should.deep.equal(['c', 'd', 'e']);
+          expect(items).toEqual(['c', 'd', 'e']);
         });
       });
     });
@@ -1364,14 +1365,14 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new ArrayIterator(['a', 'b', 'c', 'd', 'e']);
         result = iterator.take(3);
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1381,7 +1382,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should take the given number of items', () => {
-          items.should.deep.equal(['a', 'b', 'c']);
+          expect(items).toEqual(['a', 'b', 'c']);
         });
       });
     });
@@ -1394,14 +1395,14 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new IntegerIterator();
         result = iterator.range(20, 29);
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1412,22 +1413,22 @@ describe('SimpleTransformIterator', () => {
 
         it('should contain the indicated range', () => {
           items.should.have.length(10);
-          items[0].should.equal(20);
-          items[9].should.equal(29);
+          items[0].toEqual(20);
+          items[9].toEqual(29);
         });
       });
     });
 
     describe('when called on an iterator with an inverse range', () => {
       let iterator, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new IntegerIterator();
         sinon.spy(iterator, 'read');
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result = iterator.range(30, 20);
           result.on('data', item => { items.push(item); });
           result.on('end', done);
@@ -1455,7 +1456,7 @@ describe('SimpleTransformIterator', () => {
 
     describe('when called on an iterator', () => {
       let iterator, map, prepend, append, result;
-      before(() => {
+      beforeEach(() => {
         let i = 0;
         iterator = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
         map = item => item + (++i);
@@ -1468,8 +1469,8 @@ describe('SimpleTransformIterator', () => {
       });
 
       describe('the return value', () => {
-        const items = [];
-        before(done => {
+        const items: string[] = [];
+        beforeEach(done => {
           result.on('data', item => { items.push(item); });
           result.on('end', done);
         });
@@ -1479,7 +1480,7 @@ describe('SimpleTransformIterator', () => {
         });
 
         it('should transform the items', () => {
-          items.should.deep.equal(['i', 'ii', 'iii', 'c1', 'd2', 'e3', 'I', 'II', 'III']);
+          expect(items).toEqual(['i', 'ii', 'iii', 'c1', 'd2', 'e3', 'I', 'II', 'III']);
         });
       });
     });

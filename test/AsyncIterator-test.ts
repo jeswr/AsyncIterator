@@ -5,354 +5,354 @@ import {
   ENDED,
   DESTROYED,
   scheduleTask,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
 
 describe('AsyncIterator', () => {
   describe('The AsyncIterator module', () => {
     describe('is a function', () => {
-      AsyncIterator.should.be.a('function');
+      expect(AsyncIterator).toBeInstanceOf(Function);
     });
   });
 
   describe('The AsyncIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new AsyncIterator(); });
+      let instance: AsyncIterator<never>;
+      beforeEach(() => { instance = new AsyncIterator(); });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
 
   describe('A default AsyncIterator instance', () => {
-    let iterator;
-    before(() => {
+    let iterator: AsyncIterator<never>;
+    beforeEach(() => {
       iterator = new AsyncIterator();
       captureEvents(iterator, 'data', 'readable', 'end');
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[AsyncIterator]');
+      expect(iterator.toString()).toEqual('[AsyncIterator]');
     });
 
     it('should not have emitted the `readable` event', () => {
-      iterator._eventCounts.readable.should.equal(0);
+      expect((iterator as any)._eventCounts.readable).toEqual(0);
     });
 
     it('should not have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(0);
+      expect((iterator as any)._eventCounts.end).toEqual(0);
     });
 
     it('should return null when trying to read', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should not have been destroyed', () => {
-      iterator.destroyed.should.be.false;
+      expect(iterator.destroyed).toBe(false);
     });
 
     it('should not be done', () => {
-      iterator.done.should.be.false;
+      expect(iterator.done).toBe(false);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     describe('when readable is set to a truthy value', () => {
-      before(() => { iterator.readable = 'a'; });
+      beforeEach(() => { iterator.readable = 'a'; });
 
       it('should have emitted a `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have true as readable value', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('when readable is set to a falsy value', () => {
-      before(() => { iterator.readable = null; });
+      beforeEach(() => { iterator.readable = null; });
 
       it('should not have emitted another `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have false as readable value', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
     });
 
     describe('after close has been called', () => {
-      before(() => { iterator.close(); });
+      beforeEach(() => { iterator.close(); });
 
       it('should not have emitted another `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('cannot be made readable again', () => {
         iterator.readable = true;
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when trying to read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not have any listeners for data, readable, or end', () => {
-        expect(iterator._events).to.not.contain.key('data');
-        expect(iterator._events).to.not.contain.key('readable');
-        expect(iterator._events).to.not.contain.key('end');
+        expect((iterator as any)._events).to.not.contain.key('data');
+        expect((iterator as any)._events).to.not.contain.key('readable');
+        expect((iterator as any)._events).to.not.contain.key('end');
       });
     });
 
     describe('after destroy has been called', () => {
-      before(() => { iterator.destroy(); });
+      beforeEach(() => { iterator.destroy(); });
 
       it('should not have emitted another `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('cannot be made readable again', () => {
         iterator.readable = true;
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when trying to read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not have any listeners for data, readable, or end', () => {
-        expect(iterator._events).to.not.contain.key('data');
-        expect(iterator._events).to.not.contain.key('readable');
-        expect(iterator._events).to.not.contain.key('end');
+        expect((iterator as any)._events).to.not.contain.key('data');
+        expect((iterator as any)._events).to.not.contain.key('readable');
+        expect((iterator as any)._events).to.not.contain.key('end');
       });
     });
 
     describe('after close has been called a second time', () => {
-      before(() => { iterator.close(); });
+      beforeEach(() => { iterator.close(); });
 
       it('should not have emitted another `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event a second time', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when trying to read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not have any listeners for data, readable, or end', () => {
-        expect(iterator._events).to.not.contain.key('data');
-        expect(iterator._events).to.not.contain.key('readable');
-        expect(iterator._events).to.not.contain.key('end');
+        expect((iterator as any)._events).to.not.contain.key('data');
+        expect((iterator as any)._events).to.not.contain.key('readable');
+        expect((iterator as any)._events).to.not.contain.key('end');
       });
     });
   });
 
   describe('A default AsyncIterator instance', () => {
-    let iterator;
-    before(() => {
+    let iterator: AsyncIterator<never>;
+    beforeEach(() => {
       iterator = new AsyncIterator();
     });
 
     describe('when in OPEN state', () => {
       it('cannot transition to OPEN state', () => {
-        expect(iterator._changeState(OPEN)).to.be.false;
+        expect((iterator as any)._changeState(OPEN)).toBe(false);
       });
 
       it('can transition to CLOSED state', () => {
-        expect(iterator._changeState(CLOSED)).to.be.true;
+        expect((iterator as any)._changeState(CLOSED)).toBe(true);
       });
     });
 
     describe('when in CLOSED state', () => {
-      before(() => {
-        iterator._changeState(CLOSED);
+      beforeEach(() => {
+        (iterator as any)._changeState(CLOSED);
       });
 
       it('cannot transition to CLOSED state', () => {
-        expect(iterator._changeState(CLOSED)).to.be.false;
+        expect((iterator as any)._changeState(CLOSED)).toBe(false);
       });
 
       it('can transition to ENDED state', () => {
-        expect(iterator._changeState(ENDED)).to.be.true;
+        expect((iterator as any)._changeState(ENDED)).toBe(true);
       });
     });
 
     describe('when in ENDED state', () => {
-      before(() => {
-        iterator._changeState(ENDED);
+      beforeEach(() => {
+        (iterator as any)._changeState(ENDED);
       });
 
       it('cannot transition to ENDED state', () => {
-        expect(iterator._changeState(ENDED)).to.be.false;
+        expect((iterator as any)._changeState(ENDED)).toBe(false);
       });
 
       it('cannot transition to DESTROYED state', () => {
-        expect(iterator._changeState(DESTROYED)).to.be.false;
+        expect((iterator as any)._changeState(DESTROYED)).toBe(false);
       });
     });
   });
 
   describe('A default AsyncIterator instance that is destroyed', () => {
-    let iterator;
-    before(() => {
+    let iterator: AsyncIterator<never>;
+    beforeEach(() => {
       iterator = new AsyncIterator();
       captureEvents(iterator, 'data', 'readable', 'end');
       iterator.destroy();
     });
 
     it('should not have emitted a `readable` event', () => {
-      iterator._eventCounts.readable.should.equal(0);
+      expect((iterator as any)._eventCounts.readable).toEqual(0);
     });
 
     it('should not have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(0);
+      expect((iterator as any)._eventCounts.end).toEqual(0);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should have been destroyed', () => {
-      iterator.destroyed.should.be.true;
+      expect(iterator.destroyed).toBe(true);
     });
 
     it('should be done', () => {
-      iterator.done.should.be.true;
+      expect(iterator.done).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('cannot be made readable again', () => {
       iterator.readable = true;
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when trying to read', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have any listeners for data, readable, or end', () => {
-      expect(iterator._events).to.not.contain.key('data');
-      expect(iterator._events).to.not.contain.key('readable');
-      expect(iterator._events).to.not.contain.key('end');
+      expect((iterator as any)._events).to.not.contain.key('data');
+      expect((iterator as any)._events).to.not.contain.key('readable');
+      expect((iterator as any)._events).to.not.contain.key('end');
     });
 
     describe('after destroy has been called a second time', () => {
-      before(() => { iterator.destroy(); });
+      beforeEach(() => { iterator.destroy(); });
 
       it('should not have emitted a `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should still not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should have been destroyed', () => {
-        iterator.destroyed.should.be.true;
+        expect(iterator.destroyed).toBe(true);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when trying to read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not have any listeners for data, readable, or end', () => {
-        expect(iterator._events).to.not.contain.key('data');
-        expect(iterator._events).to.not.contain.key('readable');
-        expect(iterator._events).to.not.contain.key('end');
+        expect((iterator as any)._events).to.not.contain.key('data');
+        expect((iterator as any)._events).to.not.contain.key('readable');
+        expect((iterator as any)._events).to.not.contain.key('end');
       });
     });
   });
 
   describe('A default AsyncIterator instance that is destroyed with a given error', () => {
-    let iterator, err;
-    before(() => {
+    let iterator: AsyncIterator<never>, err;
+    beforeEach(() => {
       iterator = new AsyncIterator();
       err = new Error('Some error');
       captureEvents(iterator, 'data', 'readable', 'end', 'error');
@@ -360,106 +360,106 @@ describe('AsyncIterator', () => {
     });
 
     it('should not have emitted a `readable` event', () => {
-      iterator._eventCounts.readable.should.equal(0);
+      expect((iterator as any)._eventCounts.readable).toEqual(0);
     });
 
     it('should not have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(0);
+      expect((iterator as any)._eventCounts.end).toEqual(0);
     });
 
     it('should have emitted the `error` event', () => {
-      iterator._eventCounts.error.should.equal(1);
+      (iterator as any)._eventCounts.error.toEqual(1);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should have been destroyed', () => {
-      iterator.destroyed.should.be.true;
+      expect(iterator.destroyed).toBe(true);
     });
 
     it('should be done', () => {
-      iterator.done.should.be.true;
+      expect(iterator.done).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('cannot be made readable again', () => {
       iterator.readable = true;
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when trying to read', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have any listeners for data, readable, or end', () => {
-      expect(iterator._events).to.not.contain.key('data');
-      expect(iterator._events).to.not.contain.key('readable');
-      expect(iterator._events).to.not.contain.key('end');
+      expect((iterator as any)._events).to.not.contain.key('data');
+      expect((iterator as any)._events).to.not.contain.key('readable');
+      expect((iterator as any)._events).to.not.contain.key('end');
     });
   });
 
   describe('A default AsyncIterator instance that is destroyed asynchronously', () => {
-    let iterator;
-    before(() => {
+    let iterator: AsyncIterator<never>;
+    beforeEach(() => {
       iterator = new AsyncIterator();
       captureEvents(iterator, 'data', 'readable', 'end');
-      iterator._destroy = (error, callback) => scheduleTask(callback);
+      (iterator as any)._destroy = (error, callback) => scheduleTask(callback);
       iterator.destroy();
     });
 
     it('should not have emitted a `readable` event', () => {
-      iterator._eventCounts.readable.should.equal(0);
+      expect((iterator as any)._eventCounts.readable).toEqual(0);
     });
 
     it('should not have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(0);
+      expect((iterator as any)._eventCounts.end).toEqual(0);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should have been destroyed', () => {
-      iterator.destroyed.should.be.true;
+      expect(iterator.destroyed).toBe(true);
     });
 
     it('should be done', () => {
-      iterator.done.should.be.true;
+      expect(iterator.done).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('cannot be made readable again', () => {
       iterator.readable = true;
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when trying to read', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have any listeners for data, readable, or end', () => {
-      expect(iterator._events).to.not.contain.key('data');
-      expect(iterator._events).to.not.contain.key('readable');
-      expect(iterator._events).to.not.contain.key('end');
+      expect((iterator as any)._events).to.not.contain.key('data');
+      expect((iterator as any)._events).to.not.contain.key('readable');
+      expect((iterator as any)._events).to.not.contain.key('end');
     });
   });
 
   describe('An AsyncIterator instance without items', () => {
-    let iterator, dataListener;
-    before(() => {
+    let iterator: AsyncIterator<never>, dataListener;
+    beforeEach(() => {
       iterator = new AsyncIterator();
     });
 
     describe('after a data listener is attached', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.on('data', dataListener = sinon.spy());
       });
 
@@ -469,7 +469,7 @@ describe('AsyncIterator', () => {
     });
 
     describe('after the iterator has ended', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.close();
       });
 
@@ -480,8 +480,8 @@ describe('AsyncIterator', () => {
   });
 
   describe('An AsyncIterator instance with 1 item', () => {
-    let iterator, dataListener;
-    before(() => {
+    let iterator: AsyncIterator<never>, dataListener;
+    beforeEach(() => {
       const items = [1];
       iterator = new AsyncIterator();
       iterator.readable = true;
@@ -489,7 +489,7 @@ describe('AsyncIterator', () => {
     });
 
     describe('after a data listener is attached', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.on('data', dataListener = sinon.spy());
       });
 
@@ -509,14 +509,14 @@ describe('AsyncIterator', () => {
   describe('An AsyncIterator instance to which items are added', () => {
     const items = [];
     let iterator, dataListener1, dataListener2;
-    before(() => {
+    beforeEach(() => {
       iterator = new AsyncIterator();
       iterator.readable = true;
       iterator.read = sinon.spy(() => items.shift() || null);
     });
 
     describe('after two items are added', () => {
-      before(() => {
+      beforeEach(() => {
         items.push(1, 2);
         iterator.emit('readable');
       });
@@ -527,31 +527,31 @@ describe('AsyncIterator', () => {
     });
 
     describe('after a `data` listener is attached', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.on('data', dataListener1 = sinon.spy());
       });
 
       it('should have emitted the `data` event for both items', () => {
         dataListener1.should.have.callCount(2);
-        dataListener1.getCall(0).args[0].should.equal(1);
-        dataListener1.getCall(1).args[0].should.equal(2);
+        dataListener1.getCall(0).args[0].toEqual(1);
+        dataListener1.getCall(1).args[0].toEqual(2);
       });
 
       it('should have called `read` for both items, plus one check afterwards', () => {
-        iterator.read.should.have.callCount(2 + 1);
+        expect(iterator.read).toHaveBeenCalledTimes(2 + 1);
       });
 
       it('should only have one `readable` listener', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(1);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(1);
       });
 
       it('should not be listening for the `newListener` event', () => {
-        EventEmitter.listenerCount(iterator, 'newListener').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'newListener').toEqual(0);
       });
     });
 
     describe('after a second `data` listener is attached', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.on('data', dataListener2 = sinon.spy());
       });
 
@@ -561,40 +561,40 @@ describe('AsyncIterator', () => {
       });
 
       it('should not have called `read` more', () => {
-        iterator.read.should.have.callCount(3);
+        expect(iterator.read).toHaveBeenCalledTimes(3);
       });
 
       it('should only have one `readable` listener', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(1);
+        expect(EventEmitter.listenerCount(iterator, 'readable')).toEqual(1);
       });
 
       it('should not be listening for the `newListener` event', () => {
-        EventEmitter.listenerCount(iterator, 'newListener').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'newListener').toEqual(0);
       });
     });
 
     describe('after two more data items are added', () => {
-      before(() => {
+      beforeEach(() => {
         items.push(3, 4);
         iterator.emit('readable');
       });
 
       it('should have emitted the `data` event for both items', () => {
         dataListener1.should.have.callCount(4);
-        dataListener1.getCall(2).args[0].should.equal(3);
-        dataListener1.getCall(3).args[0].should.equal(4);
+        dataListener1.getCall(2).args[0].toEqual(3);
+        dataListener1.getCall(3).args[0].toEqual(4);
         dataListener2.should.have.callCount(2);
-        dataListener2.getCall(0).args[0].should.equal(3);
-        dataListener2.getCall(1).args[0].should.equal(4);
+        dataListener2.getCall(0).args[0].toEqual(3);
+        dataListener2.getCall(1).args[0].toEqual(4);
       });
 
       it('should have called `read` for all four items, plus two checks afterwards', () => {
-        iterator.read.should.have.callCount(4 + 2);
+        expect(iterator.read).toHaveBeenCalledTimes(4 + 2);
       });
     });
 
     describe('after the two listeners are removed and two new items are added', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.removeListener('data', dataListener1);
         iterator.removeListener('data', dataListener2);
 
@@ -603,57 +603,57 @@ describe('AsyncIterator', () => {
       });
 
       it('should not have called `read` anymore', () => {
-        iterator.read.should.have.callCount(4 + 2);
+        expect(iterator.read).toHaveBeenCalledTimes(4 + 2);
       });
 
       it('should not be listening for the `readable` event anymore', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(0);
       });
     });
 
     describe('after the `data` listeners are attached again', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.on('data', dataListener1);
         iterator.on('data', dataListener2);
       });
 
       it('should have emitted the `data` event for both new items', () => {
         dataListener1.should.have.callCount(6);
-        dataListener1.getCall(4).args[0].should.equal(5);
-        dataListener1.getCall(5).args[0].should.equal(6);
+        dataListener1.getCall(4).args[0].toEqual(5);
+        dataListener1.getCall(5).args[0].toEqual(6);
         dataListener2.should.have.callCount(4);
-        dataListener2.getCall(2).args[0].should.equal(5);
-        dataListener2.getCall(3).args[0].should.equal(6);
+        dataListener2.getCall(2).args[0].toEqual(5);
+        dataListener2.getCall(3).args[0].toEqual(6);
       });
 
       it('should have called `read` for all six items, plus three checks afterwards', () => {
-        iterator.read.should.have.callCount(6 + 3);
+        expect(iterator.read).toHaveBeenCalledTimes(6 + 3);
       });
 
       it('should only have one `readable` listener', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(1);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(1);
       });
 
       it('should not be listening for the `newListener` event', () => {
-        EventEmitter.listenerCount(iterator, 'newListener').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'newListener').toEqual(0);
       });
     });
 
     describe('after the iterator is closed', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.close();
       });
 
       it('should not have listeners for the `data` event', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(0);
       });
 
       it('should not be listening for the `readable` event', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(0);
       });
 
       it('should not be listening for the `newListener` event', () => {
-        EventEmitter.listenerCount(iterator, 'newListener').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'newListener').toEqual(0);
       });
     });
   });
@@ -661,7 +661,7 @@ describe('AsyncIterator', () => {
   describe('An AsyncIterator instance to which 2 items are added an will be destroyed', () => {
     const items = [];
     let iterator, dataListener;
-    before(() => {
+    beforeEach(() => {
       iterator = new AsyncIterator();
       iterator.readable = true;
       iterator.read = sinon.spy(() => items.shift() || null);
@@ -671,7 +671,7 @@ describe('AsyncIterator', () => {
     });
 
     describe('after the iterator is destroyed', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.on('data', dataListener = sinon.spy());
         iterator.destroy();
       });
@@ -681,15 +681,15 @@ describe('AsyncIterator', () => {
       });
 
       it('should not have listeners for the `data` event', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(0);
       });
 
       it('should not be listening for the `readable` event', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(0);
       });
 
       it('should not be listening for the `newListener` event', () => {
-        EventEmitter.listenerCount(iterator, 'newListener').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'newListener').toEqual(0);
       });
     });
   });
@@ -697,7 +697,7 @@ describe('AsyncIterator', () => {
   describe('An AsyncIterator instance to which 2 items are added an will be destroyed with an error', () => {
     const items = [];
     let iterator, err, dataListener, errorListener;
-    before(() => {
+    beforeEach(() => {
       iterator = new AsyncIterator();
       iterator.readable = true;
       iterator.read = sinon.spy(() => items.shift() || null);
@@ -707,7 +707,7 @@ describe('AsyncIterator', () => {
     });
 
     describe('after the iterator is destroyed with an error', () => {
-      before(() => {
+      beforeEach(() => {
         err = new Error('My error');
         iterator.on('data', dataListener = sinon.spy());
         iterator.on('error', errorListener = sinon.spy());
@@ -723,34 +723,34 @@ describe('AsyncIterator', () => {
       });
 
       it('should not have listeners for the `data` event', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(0);
       });
 
       it('should not be listening for the `readable` event', () => {
-        EventEmitter.listenerCount(iterator, 'readable').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'readable').toEqual(0);
       });
 
       it('should not be listening for the `newListener` event', () => {
-        EventEmitter.listenerCount(iterator, 'newListener').should.equal(0);
+        EventEmitter.listenerCount(iterator, 'newListener').toEqual(0);
       });
     });
   });
 
   describe('An AsyncIterator with properties', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new AsyncIterator();
     });
 
     describe('when getProperties is called', () => {
-      describe('before any property is set', () => {
+      describe('beforeEach any property is set', () => {
         it('should return an empty object', () => {
           expect(iterator.getProperties()).to.deep.equal({});
         });
       });
 
       describe('when the return value is modified', () => {
-        before(() => {
+        beforeEach(() => {
           const properties = iterator.getProperties();
           properties.a = 'A';
           properties.b = 'B';
@@ -762,7 +762,7 @@ describe('AsyncIterator', () => {
       });
 
       describe('after a property is set', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('test', 'xyz');
         });
         it('should return an object with the properties', () => {
@@ -773,7 +773,7 @@ describe('AsyncIterator', () => {
       });
 
       describe('after the property is changed', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('test', 'abc');
         });
 
@@ -785,7 +785,7 @@ describe('AsyncIterator', () => {
       });
 
       describe('after multiple properties are set', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperties({ test: 'def', test2: 'ghi' });
         });
 
@@ -799,14 +799,14 @@ describe('AsyncIterator', () => {
     });
 
     describe('when getProperty is called without callback', () => {
-      describe('before the property is set', () => {
+      describe('beforeEach the property is set', () => {
         it('should return undefined', () => {
           expect(iterator.getProperty('foo')).to.be.undefined;
         });
       });
 
       describe('after the property is set', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('foo', 'FOO');
         });
 
@@ -816,7 +816,7 @@ describe('AsyncIterator', () => {
       });
 
       describe('after the property is changed', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('foo', 'FOOFOO');
         });
 
@@ -828,12 +828,12 @@ describe('AsyncIterator', () => {
 
     describe('when getProperty is called with a callback', () => {
       let result, callback;
-      before(() => {
+      beforeEach(() => {
         callback = sinon.stub();
         result = iterator.getProperty('bar', callback);
       });
 
-      describe('before the property is set', () => {
+      describe('beforeEach the property is set', () => {
         it('should return undefined', () => {
           expect(result).to.be.undefined;
         });
@@ -844,7 +844,7 @@ describe('AsyncIterator', () => {
       });
 
       describe('after the property is set', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('bar', 'BAR');
           callback.should.not.have.been.called;
         });
@@ -856,7 +856,7 @@ describe('AsyncIterator', () => {
 
         describe('if a new callback is attached', () => {
           let newCallback;
-          before(() => {
+          beforeEach(() => {
             newCallback = sinon.stub();
             result = iterator.getProperty('bar', newCallback);
             newCallback.should.not.have.been.called;
@@ -870,7 +870,7 @@ describe('AsyncIterator', () => {
       });
 
       describe('after the property is changed', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('bar', 'BARBAR');
         });
 
@@ -880,7 +880,7 @@ describe('AsyncIterator', () => {
 
         describe('if a new callback is attached', () => {
           let newCallback;
-          before(() => {
+          beforeEach(() => {
             newCallback = sinon.stub();
             result = iterator.getProperty('bar', newCallback);
             newCallback.should.not.have.been.called;
@@ -897,14 +897,14 @@ describe('AsyncIterator', () => {
     describe('when getProperty is called multiple times with a callback', () => {
       const callbacks = [];
       let result;
-      before(() => {
+      beforeEach(() => {
         for (let i = 0; i < 5; i++) {
           callbacks[i] = sinon.stub();
           result = iterator.getProperty('bax', callbacks[i]);
         }
       });
 
-      describe('before the property is set', () => {
+      describe('beforeEach the property is set', () => {
         it('should return undefined', () => {
           expect(result).to.be.undefined;
         });
@@ -916,7 +916,7 @@ describe('AsyncIterator', () => {
       });
 
       describe('after the property is set', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('bax', 'BAX');
           for (let i = 0; i < callbacks.length; i++)
             callbacks[i].should.not.have.been.called;
@@ -936,7 +936,7 @@ describe('AsyncIterator', () => {
 
         describe('if a new callback is attached', () => {
           let callback;
-          before(() => {
+          beforeEach(() => {
             callback = sinon.stub();
             result = iterator.getProperty('bax', callback);
             callback.should.not.have.been.called;
@@ -950,7 +950,7 @@ describe('AsyncIterator', () => {
       });
 
       describe('after the property is changed', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('bax', 'BAXBAX');
         });
 
@@ -961,7 +961,7 @@ describe('AsyncIterator', () => {
 
         describe('if a new callback is attached', () => {
           let callback;
-          before(() => {
+          beforeEach(() => {
             callback = sinon.stub();
             result = iterator.getProperty('bax', callback);
             callback.should.not.have.been.called;
@@ -977,7 +977,7 @@ describe('AsyncIterator', () => {
 
     describe('when copyProperties is called', () => {
       let source;
-      before(() => {
+      beforeEach(() => {
         source = new AsyncIterator();
         source.setProperties({ a: 'A', b: 'B', c: 'C' });
         iterator.copyProperties(source, ['a', 'c']);
@@ -1001,7 +1001,7 @@ describe('AsyncIterator', () => {
 
     describe('called on an empty iterator', () => {
       let iterator, callback, result;
-      before(() => {
+      beforeEach(() => {
         iterator = new AsyncIterator();
         callback = sinon.stub();
         result = iterator.forEach(callback);
@@ -1018,7 +1018,7 @@ describe('AsyncIterator', () => {
 
     describe('called on an iterator with two items', () => {
       let iterator, callback, result;
-      before(() => {
+      beforeEach(() => {
         let i = 0;
         iterator = new AsyncIterator();
         iterator.readable = true;
@@ -1036,22 +1036,22 @@ describe('AsyncIterator', () => {
       });
 
       it('should send the first item in the first call', () => {
-        callback.getCall(0).args.should.deep.equal([1]);
+        callback.getCall(0).args.toEqual([1]);
       });
 
       it('should send the second item in the first call', () => {
-        callback.getCall(1).args.should.deep.equal([2]);
+        callback.getCall(1).args.toEqual([2]);
       });
 
       it('should call the callback with the iterator as `this`', () => {
-        callback.alwaysCalledOn(iterator).should.be.true;
+        callback.alwaysCalledOn(iterator).toBe(true);
       });
     });
 
     describe('called on an iterator with two items and a `this` argument', () => {
       const self = {};
       let iterator, callback, result;
-      before(() => {
+      beforeEach(() => {
         let i = 0;
         iterator = new AsyncIterator();
         iterator.readable = true;
@@ -1069,15 +1069,15 @@ describe('AsyncIterator', () => {
       });
 
       it('should send the first item in the first call', () => {
-        callback.getCall(0).args.should.deep.equal([1]);
+        callback.getCall(0).args.toEqual([1]);
       });
 
       it('should send the second item in the first call', () => {
-        callback.getCall(1).args.should.deep.equal([2]);
+        callback.getCall(1).args.toEqual([2]);
       });
 
       it('should call the callback with the argument as `this`', () => {
-        callback.alwaysCalledOn(self).should.be.true;
+        callback.alwaysCalledOn(self).toBe(true);
       });
     });
   });

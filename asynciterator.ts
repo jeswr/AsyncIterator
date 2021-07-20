@@ -1398,7 +1398,7 @@ export class MultiTransformIterator<S, D = S> extends TransformIterator<S, D> {
       // Create the transformer and listen to its events
       const transformer = (this._createTransformer(item) ||
         new EmptyIterator()) as InternalSource<D>;
-      transformer._destination = this;
+      (transformer as any)._destination = this;
       transformer.on('end', destinationFillBuffer);
       transformer.on('readable', destinationFillBuffer);
       transformer.on('error', destinationEmitError);

@@ -3,101 +3,101 @@ import {
   BufferedIterator,
   CLOSED,
   scheduleTask,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
 
 describe('BufferedIterator', () => {
   describe('The BufferedIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new BufferedIterator(); });
+      let instance: BufferedIterator<never>;
+      beforeEach(() => { instance = new BufferedIterator(); });
 
       it('should be a BufferedIterator object', () => {
-        instance.should.be.an.instanceof(BufferedIterator);
+        expect(instance).toBeInstanceOf(BufferedIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
 
   describe('A BufferedIterator without arguments', () => {
-    let iterator;
-    before(() => {
+    let iterator: BufferedIterator<never>;
+    beforeEach(() => {
       iterator = new BufferedIterator();
       captureEvents(iterator, 'readable', 'end');
     });
 
     it('should have maxBufferSize 4', () => {
-      iterator.maxBufferSize.should.equal(4);
+      expect(iterator.maxBufferSize).toEqual(4);
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[BufferedIterator {buffer: 0}]');
+      expect(iterator.toString()).toEqual('[BufferedIterator {buffer: 0}]');
     });
 
     it('should not have emitted the `readable` event', () => {
-      iterator._eventCounts.readable.should.equal(0);
+      expect((iterator as any)._eventCounts.readable).toEqual(0);
     });
 
     it('should not have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(0);
+      expect((iterator as any)._eventCounts.end).toEqual(0);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should not have been destroyed', () => {
-      iterator.destroyed.should.be.false;
+      expect(iterator.destroyed).toBe(false);
     });
 
     it('should not be done', () => {
-      iterator.done.should.be.false;
+      expect(iterator.done).toBe(false);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when `read` is called', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     describe('after `close` is called', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.close();
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should allow pushing but have no effect', () => {
-        iterator._push(1);
-        iterator.toString().should.equal('[BufferedIterator {buffer: 0}]');
+        (iterator as any)._push(1);
+        expect(iterator.toString()).toEqual('[BufferedIterator {buffer: 0}]');
       });
     });
   });
@@ -105,7 +105,7 @@ describe('BufferedIterator', () => {
   describe('A BufferedIterator that closes itself synchronously on read', () => {
     function createIterator(options) {
       const iterator = new BufferedIterator(options);
-      iterator._read = function (count, done) {
+      (iterator as any)._read = function (count, done) {
         this.close();
         done();
       };
@@ -115,183 +115,183 @@ describe('BufferedIterator', () => {
 
     describe('without autoStart', () => {
       let iterator;
-      before(() => { iterator = createIterator({ autoStart: false }); });
+      beforeEach(() => { iterator = createIterator({ autoStart: false }); });
 
       describe('before `read` has been called', () => {
         it('should have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should not have called _read', () => {
-          iterator._read.should.not.have.been.called;
+          (iterator as any)._read.should.not.have.been.called;
         });
       });
 
       describe('after `read` has been called the first time', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned null', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should not have emitted the `readable` event anymore', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should have called `_read` with 4 (the default maximum buffer size)', () => {
-          iterator._read.should.have.been.calledOnce;
-          iterator._read.should.have.been.calledWith(4);
+          (iterator as any)._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledWith(4);
         });
       });
 
       describe('after `read` has been called the second time', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned null', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should not have emitted the `readable` event anymore', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted another `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledOnce;
         });
       });
     });
 
     describe('with autoStart', () => {
       let iterator;
-      before(() => { iterator = createIterator(); });
+      beforeEach(() => { iterator = createIterator(); });
 
       describe('before `read` has been called', () => {
         it('should not have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(0);
+          expect((iterator as any)._eventCounts.readable).toEqual(0);
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should have called `_read` with 4 (the default maximum buffer size)', () => {
-          iterator._read.should.have.been.calledOnce;
-          iterator._read.should.have.been.calledWith(4);
+          (iterator as any)._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledWith(4);
         });
       });
 
       describe('after `read` has been called', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned null', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should not have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(0);
+          expect((iterator as any)._eventCounts.readable).toEqual(0);
         });
 
         it('should not have emitted another `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledOnce;
         });
       });
     });
@@ -300,7 +300,7 @@ describe('BufferedIterator', () => {
   describe('A BufferedIterator that closes itself asynchronously on read', () => {
     function createIterator(options) {
       const iterator = new BufferedIterator(options);
-      iterator._read = function (count, done) {
+      (iterator as any)._read = function (count, done) {
         scheduleTask(() => {
           this.close();
           done();
@@ -312,183 +312,183 @@ describe('BufferedIterator', () => {
 
     describe('without autoStart', () => {
       let iterator;
-      before(() => { iterator = createIterator({ autoStart: false }); });
+      beforeEach(() => { iterator = createIterator({ autoStart: false }); });
 
       describe('before `read` has been called', () => {
         it('should have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should not have called _read', () => {
-          iterator._read.should.not.have.been.called;
+          (iterator as any)._read.should.not.have.been.called;
         });
       });
 
       describe('after `read` has been called the first time', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned null', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should have called `_read` with 4 (the default maximum buffer size)', () => {
-          iterator._read.should.have.been.calledOnce;
-          iterator._read.should.have.been.calledWith(4);
+          (iterator as any)._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledWith(4);
         });
       });
 
       describe('after `read` has been called the second time', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned null', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted another `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledOnce;
         });
       });
     });
 
     describe('with autoStart', () => {
       let iterator;
-      before(() => { iterator = createIterator(); });
+      beforeEach(() => { iterator = createIterator(); });
 
       describe('before `read` has been called', () => {
         it('should not have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(0);
+          expect((iterator as any)._eventCounts.readable).toEqual(0);
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should have called `_read` with 4 (the default maximum buffer size)', () => {
-          iterator._read.should.have.been.calledOnce;
-          iterator._read.should.have.been.calledWith(4);
+          (iterator as any)._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledWith(4);
         });
       });
 
       describe('after `read` has been called', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned null', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should not have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(0);
+          expect((iterator as any)._eventCounts.readable).toEqual(0);
         });
 
         it('should not have emitted another `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledOnce;
         });
       });
     });
@@ -496,110 +496,110 @@ describe('BufferedIterator', () => {
 
   describe('A BufferedIterator that is being closed', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
       captureEvents(iterator, 'readable', 'end');
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[BufferedIterator {buffer: 0}]');
+      expect(iterator.toString()).toEqual('[BufferedIterator {buffer: 0}]');
     });
 
     describe('before it has been closed', () => {
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should return null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after it has been closed', () => {
-      before(() => { iterator.close(); });
+      beforeEach(() => { iterator.close(); });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should return null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A BufferedIterator that is being closed while reading is in progress', () => {
-    let iterator, _readDone;
+    let iterator: BufferedIterator<never>, _readDone: () => void;
     function createIterator() {
       iterator = new BufferedIterator({ autoStart: false, maxBufferSize: 1 });
-      iterator._read = (count, done) => { _readDone = done; };
+      (iterator as any)._read = (count: number, done: () => void) => { _readDone = done; };
       sinon.spy(iterator, '_read');
       captureEvents(iterator, 'readable', 'end');
     }
 
     describe('when the iterator is closed synchronously after `read` is called', () => {
-      before(createIterator);
+      beforeEach(createIterator);
 
       it('should provide a readable `toString` representation', () => {
-        iterator.toString().should.equal('[BufferedIterator {buffer: 0}]');
+        expect(iterator.toString()).toEqual('[BufferedIterator {buffer: 0}]');
       });
 
       describe('before the iterator has been closed', () => {
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should not have called `_read`', () => {
-          iterator._read.should.have.callCount(0);
+          (iterator as any)._read.should.have.callCount(0);
         });
       });
 
       describe('after `read` is called and the iterator has been closed', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.read();
           iterator.close();
           // _readDone cannot be called, as _read should never be called either
@@ -607,439 +607,439 @@ describe('BufferedIterator', () => {
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not have called `_read`', () => {
-          iterator._read.should.have.callCount(0);
+          (iterator as any)._read.should.have.callCount(0);
         });
       });
     });
 
     describe('when the iterator is closed asynchronously after `read` is called', () => {
-      before(createIterator);
+      beforeEach(createIterator);
 
       it('should provide a readable `toString` representation', () => {
-        iterator.toString().should.equal('[BufferedIterator {buffer: 0}]');
+        expect(iterator.toString()).toEqual('[BufferedIterator {buffer: 0}]');
       });
 
       describe('before the iterator has been closed', () => {
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should not have called `_read`', () => {
-          iterator._read.should.have.callCount(0);
+          (iterator as any)._read.should.have.callCount(0);
         });
       });
 
       describe('after `read` is called and the iterator has been closed', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.read();
           scheduleTask(() => { _readDone(); });
           scheduleTask(() => { iterator.close(); });
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should have called `_read` once', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
     });
 
     describe('when an item is pushed, and read before closing', () => {
-      before(createIterator);
+      beforeEach(createIterator);
 
       describe('before the iterator has been closed', () => {
         it('should provide a readable `toString` representation', () => {
-          iterator.toString().should.equal('[BufferedIterator {buffer: 0}]');
+          expect(iterator.toString()).toEqual('[BufferedIterator {buffer: 0}]');
         });
 
         it('should have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should return null when `read` is called', () => {
-          expect(iterator.read()).to.be.null;
+          expect(iterator.read()).toBe(null);
         });
 
         it('should have called `_read` once', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('after an item is pushed', () => {
-        before(() => { iterator._push('a'); });
+        beforeEach(() => { (iterator as any)._push('a'); });
 
         it('should provide a readable `toString` representation', () => {
-          iterator.toString().should.equal('[BufferedIterator {next: a, buffer: 1}]');
+          expect(iterator.toString()).toEqual('[BufferedIterator {next: a, buffer: 1}]');
         });
 
         it('should have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('after an item is read', () => {
-        let item;
-        before(() => { item = iterator.read(); });
+        let item: null;
+        beforeEach(() => { item = iterator.read(); });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should have returned the pushed item', () => {
-          item.should.equal('a');
+          expect(item).toEqual('a');
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('after the iterator has been closed', () => {
-        before(() => { iterator.close(); });
+        beforeEach(() => { iterator.close(); });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('after reading has finished', () => {
-        before(() => { _readDone(); });
+        beforeEach(() => { _readDone(); });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should return null when `read` is called', () => {
-          expect(iterator.read()).to.be.null;
+          expect(iterator.read()).toBe(null);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
     });
 
     describe('when an item is pushed, and read after closing', () => {
-      before(createIterator);
+      beforeEach(createIterator);
 
       describe('before the iterator has been closed', () => {
         it('should have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should return null when `read` is called', () => {
-          expect(iterator.read()).to.be.null;
+          expect(iterator.read()).toBe(null);
         });
 
         it('should have called `_read` once', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('after an item is pushed', () => {
-        before(() => { iterator._push('a'); });
+        beforeEach(() => { (iterator as any)._push('a'); });
 
         it('should have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('after the iterator has been closed', () => {
-        before(() => { iterator.close(); });
+        beforeEach(() => { iterator.close(); });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('after an item is read', () => {
-        let item;
-        before(() => { item = iterator.read(); });
+        let item: null;
+        beforeEach(() => { item = iterator.read(); });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should have returned the pushed item', () => {
-          item.should.equal('a');
+          expect(item).toEqual('a');
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('after reading has finished', () => {
-        before(() => { _readDone(); });
+        beforeEach(() => { _readDone(); });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should return null when `read` is called', () => {
-          expect(iterator.read()).to.be.null;
+          expect(iterator.read()).toBe(null);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
     });
@@ -1048,7 +1048,7 @@ describe('BufferedIterator', () => {
   describe('A BufferedIterator that synchronously pushes "a" and ends', () => {
     function createIterator(options) {
       const iterator = new BufferedIterator(options);
-      iterator._read = function (count, done) {
+      (iterator as any)._read = function (count, done) {
         this._push('a');
         this.close();
         done();
@@ -1058,230 +1058,230 @@ describe('BufferedIterator', () => {
     }
 
     describe('without autoStart', () => {
-      let iterator;
-      before(() => { iterator = createIterator({ autoStart: false }); });
+      let iterator: BufferedIterator<never>;
+      beforeEach(() => { iterator = createIterator({ autoStart: false }); });
 
       it('should provide a readable `toString` representation', () => {
-        iterator.toString().should.equal('[BufferedIterator {buffer: 0}]');
+        expect(iterator.toString()).toEqual('[BufferedIterator {buffer: 0}]');
       });
 
       describe('before `read` has been called', () => {
         it('should have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should not have called _read', () => {
-          iterator._read.should.not.have.been.called;
+          (iterator as any)._read.should.not.have.been.called;
         });
       });
 
       describe('after `read` has been called the first time', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned null', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should have called `_read` with 4 (the default maximum buffer size)', () => {
-          iterator._read.should.have.been.calledOnce;
-          iterator._read.should.have.been.calledWith(4);
+          (iterator as any)._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledWith(4);
         });
       });
 
       describe('after `read` has been called the second time', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned "a"', () => {
           expect(item).to.equal('a');
         });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should have called `_read` with 4 (the default maximum buffer size)', () => {
-          iterator._read.should.have.been.calledOnce;
-          iterator._read.should.have.been.calledWith(4);
+          (iterator as any)._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledWith(4);
         });
       });
 
       describe('after `read` has been called the third time', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned null', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should not have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should not have emitted another `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledOnce;
         });
       });
     });
 
     describe('with autoStart', () => {
       let iterator;
-      before(() => { iterator = createIterator(); });
+      beforeEach(() => { iterator = createIterator(); });
 
       it('should provide a readable `toString` representation', () => {
-        iterator.toString().should.equal('[BufferedIterator {next: a, buffer: 1}]');
+        expect(iterator.toString()).toEqual('[BufferedIterator {next: a, buffer: 1}]');
       });
 
       describe('before `read` has been called', () => {
         it('should have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should have called `_read` with 4 (the default maximum buffer size)', () => {
-          iterator._read.should.have.been.calledOnce;
-          iterator._read.should.have.been.calledWith(4);
+          (iterator as any)._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledWith(4);
         });
       });
 
       describe('after `read` has been called', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned "a"', () => {
           expect(item).to.equal('a');
         });
 
         it('should not have emitted the `readable` event anymore', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(1);
+          expect((iterator as any)._eventCounts.end).toEqual(1);
         });
 
         it('should have ended', () => {
-          iterator.ended.should.be.true;
+          expect(iterator.ended).toBe(true);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should be done', () => {
-          iterator.done.should.be.true;
+          expect(iterator.done).toBe(true);
         });
 
         it('should not be readable', () => {
-          iterator.readable.should.be.false;
+          expect(iterator.readable).toBe(false);
         });
 
         it('should not have called `_read` anymore', () => {
-          iterator._read.should.have.been.calledOnce;
+          (iterator as any)._read.should.have.been.calledOnce;
         });
       });
     });
@@ -1290,7 +1290,7 @@ describe('BufferedIterator', () => {
   describe('A BufferedIterator that pushes "a" (sync) and "b" and "c" (async) on every read', () => {
     function createIterator(options) {
       const iterator = new BufferedIterator(options);
-      iterator._read = function (count, done) {
+      (iterator as any)._read = function (count, done) {
         this._push('a');
         scheduleTask(() => {
           this._push('b');
@@ -1304,48 +1304,48 @@ describe('BufferedIterator', () => {
 
     describe('with autoStart enabled', () => {
       let iterator;
-      before(() => { iterator = createIterator(); });
+      beforeEach(() => { iterator = createIterator(); });
 
       it('should provide a readable `toString` representation', () => {
-        iterator.toString().should.equal('[BufferedIterator {next: a, buffer: 3}]');
+        expect(iterator.toString()).toEqual('[BufferedIterator {next: a, buffer: 3}]');
       });
 
       describe('before `read` has been called', () => {
         it('should have emitted the `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          iterator._eventCounts.end.should.equal(0);
+          expect((iterator as any)._eventCounts.end).toEqual(0);
         });
 
         it('should not have ended', () => {
-          iterator.ended.should.be.false;
+          expect(iterator.ended).toBe(false);
         });
 
         it('should not have been destroyed', () => {
-          iterator.destroyed.should.be.false;
+          expect(iterator.destroyed).toBe(false);
         });
 
         it('should not be done', () => {
-          iterator.done.should.be.false;
+          expect(iterator.done).toBe(false);
         });
 
         it('should be readable', () => {
-          iterator.readable.should.be.true;
+          expect(iterator.readable).toBe(true);
         });
 
         it('should have called `_read` with 4 (the maximum buffer size)', () => {
-          iterator._read.should.have.been.calledOnce;
-          iterator._read.getCall(0).args[0].should.equal(4);
+          (iterator as any)._read.should.have.been.calledOnce;
+          (iterator as any)._read.getCall(0).args[0].toEqual(4);
         });
       });
 
       describe('after `read` has been called the first time', () => {
         let item;
-        before(() => {
+        beforeEach(() => {
           item = iterator.read();
-          iterator._read.should.have.been.calledOnce; // ensure `_read` is not called synchronously
+          (iterator as any)._read.should.have.been.calledOnce; // ensure `_read` is not called synchronously
         });
 
         it('should have returned "a"', () => {
@@ -1353,35 +1353,35 @@ describe('BufferedIterator', () => {
         });
 
         it('should not have emitted another `readable` event yet', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should have called `_read` with 2 (number of free places in buffer)', () => {
-          iterator._read.should.have.been.calledTwice;
-          iterator._read.getCall(1).args[0].should.equal(2);
+          (iterator as any)._read.should.have.been.calledTwice;
+          (iterator as any)._read.getCall(1).args[0].toEqual(2);
         });
       });
 
       describe('after `read` has been called the second time', () => {
         let item;
-        before(() => { item = iterator.read(); });
+        beforeEach(() => { item = iterator.read(); });
 
         it('should have returned "b"', () => {
           expect(item).to.equal('b');
         });
 
         it('should not have emitted another `readable` event yet', () => {
-          iterator._eventCounts.readable.should.equal(1);
+          expect((iterator as any)._eventCounts.readable).toEqual(1);
         });
 
         it('should not have called `_read` anymore (because buffer is full)', () => {
-          iterator._read.should.have.been.calledTwice;
+          (iterator as any)._read.should.have.been.calledTwice;
         });
       });
 
       describe('after `read` is called six more times', () => {
         const items = [];
-        before(() => {
+        beforeEach(() => {
           for (let i = 0; i < 6; i++)
             items.push(iterator.read());
         });
@@ -1392,12 +1392,12 @@ describe('BufferedIterator', () => {
         });
 
         it('should have emitted another `readable` event', () => {
-          iterator._eventCounts.readable.should.equal(2);
+          expect((iterator as any)._eventCounts.readable).toEqual(2);
         });
 
         it('should have called `_read` then with 4 (to fill the entire buffer)', () => {
-          iterator._read.should.have.callCount(3);
-          iterator._read.getCall(2).args[0].should.equal(4);
+          (iterator as any)._read.should.have.callCount(3);
+          (iterator as any)._read.getCall(2).args[0].toEqual(4);
         });
       });
     });
@@ -1405,9 +1405,9 @@ describe('BufferedIterator', () => {
 
   describe('A BufferedIterator with `_read` that calls `done` multiple times', () => {
     let iterator, readDone;
-    before(done => {
+    beforeEach(done => {
       iterator = new BufferedIterator({ autoStart: false });
-      iterator._read = (count, callback) => { readDone = callback; };
+      (iterator as any)._read = (count, callback) => { readDone = callback; };
       scheduleTask(() => { iterator.read(); done(); });
     });
 
@@ -1420,9 +1420,9 @@ describe('BufferedIterator', () => {
 
   describe('A BufferedIterator with `_read` that does not call `done`', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._read = function () { this._push('a'); };
+      (iterator as any)._read = function () { this._push('a'); };
     });
 
     it('should return the first item on read', () => {
@@ -1430,16 +1430,16 @@ describe('BufferedIterator', () => {
     });
 
     it('should return null on subsequent reads', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
   });
 
   describe('A BufferedIterator with `_read` that calls `read`', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       let counter = 0;
       iterator = new BufferedIterator();
-      iterator._read = function () { this.read(); this._push(counter++); };
+      (iterator as any)._read = function () { this.read(); this._push(counter++); };
     });
 
     it('should return the first item on read', () => {
@@ -1447,20 +1447,20 @@ describe('BufferedIterator', () => {
     });
 
     it('should return null on subsequent reads', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
   });
 
   describe('A BufferedIterator with a synchronous beginning', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._begin = function (done) {
+      (iterator as any)._begin = function (done) {
         this._push('x');
         this._push('y');
         done();
       };
-      iterator._read = function (item, done) {
+      (iterator as any)._read = function (item, done) {
         this._push('a');
         this.close();
         done();
@@ -1469,179 +1469,179 @@ describe('BufferedIterator', () => {
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[BufferedIterator {next: x, buffer: 3}]');
+      expect(iterator.toString()).toEqual('[BufferedIterator {next: x, buffer: 3}]');
     });
 
     describe('before reading an item', () => {
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the beginning items', () => {
       const items = [];
-      before(() => {
+      beforeEach(() => {
         for (let i = 0; i < 2; i++)
           items.push(iterator.read());
       });
 
       it('should have read the beginning items', () => {
-        items.should.deep.equal(['x', 'y']);
+        items.toEqual(['x', 'y']);
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A BufferedIterator that pushes less than `maxBufferSize` items before _read', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
       for (let i = 0; i < 3; i++)
-        iterator._push(i);
+        (iterator as any)._push(i);
       sinon.spy(iterator, '_read');
     });
 
     it('should call _read with the remaining number of items', () => {
-      iterator._read.should.have.been.calledOnce;
-      iterator._read.should.have.been.calledWith(1);
+      (iterator as any)._read.should.have.been.calledOnce;
+      (iterator as any)._read.should.have.been.calledWith(1);
     });
   });
 
   describe('A BufferedIterator that pushes `maxBufferSize` items before _read', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
       for (let i = 0; i < 4; i++)
-        iterator._push(i);
+        (iterator as any)._push(i);
       sinon.spy(iterator, '_read');
     });
 
     it('should not call _read', () => {
-      iterator._read.should.not.have.been.called;
+      (iterator as any)._read.should.not.have.been.called;
     });
   });
 
   describe('A BufferedIterator that starts reading before _read is called', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
       // Forcibly change the status to 'reading',
       // to test if the iterator deals with such an exceptional situation
-      iterator._changeState = function () { this._reading = true; };
+      (iterator as any)._changeState = function () { this._reading = true; };
       sinon.spy(iterator, '_read');
     });
 
     it('should not call _read', () => {
-      iterator._read.should.not.have.been.called;
+      (iterator as any)._read.should.not.have.been.called;
     });
   });
 
   describe('A BufferedIterator that closes before _completeClose is called', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
       iterator.close();
-      iterator._changeState(CLOSED);
+      (iterator as any)._changeState(CLOSED);
       sinon.spy(iterator, '_flush');
     });
 
     it('should not call _flush', () => {
-      iterator._flush.should.not.have.been.called;
+      (iterator as any)._flush.should.not.have.been.called;
     });
   });
 
   describe('A BufferedIterator with an asynchronous beginning', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._begin = function (done) {
+      (iterator as any)._begin = function (done) {
         scheduleTask(() => {
           this._push('x');
           this._push('y');
           done();
         });
       };
-      iterator._read = function (item, done) {
+      (iterator as any)._read = function (item, done) {
         this._push('a');
         this.close();
         done();
@@ -1650,114 +1650,114 @@ describe('BufferedIterator', () => {
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[BufferedIterator {next: x, buffer: 3}]');
+      expect(iterator.toString()).toEqual('[BufferedIterator {next: x, buffer: 3}]');
     });
 
     describe('before reading an item', () => {
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the beginning items', () => {
       const items = [];
-      before(() => {
+      beforeEach(() => {
         for (let i = 0; i < 2; i++)
           items.push(iterator.read());
       });
 
       it('should have read the beginning items', () => {
-        items.should.deep.equal(['x', 'y']);
+        items.toEqual(['x', 'y']);
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A BufferedIterator with `_begin` that calls `done` multiple times', () => {
     let iterator, beginDone;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._begin = done => { beginDone = done; };
+      (iterator as any)._begin = done => { beginDone = done; };
     });
 
     it('should cause an exception', () => {
@@ -1769,16 +1769,16 @@ describe('BufferedIterator', () => {
 
   describe('A BufferedIterator with `_begin` that does not call `done`', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._begin = function () { this._push('a'); };
+      (iterator as any)._begin = function () { this._push('a'); };
       iterator.close();
       sinon.spy(iterator, '_read');
       captureEvents(iterator, 'end');
     });
 
     it('should be readable', () => {
-      iterator.readable.should.be.true;
+      expect(iterator.readable).toBe(true);
     });
 
     it('should return the first item on read', () => {
@@ -1786,44 +1786,44 @@ describe('BufferedIterator', () => {
     });
 
     it('should return null on subsequent reads', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(0);
+      expect((iterator as any)._eventCounts.end).toEqual(0);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should not have been destroyed', () => {
-      iterator.destroyed.should.be.false;
+      expect(iterator.destroyed).toBe(false);
     });
 
     it('should not be done', () => {
-      iterator.done.should.be.false;
+      expect(iterator.done).toBe(false);
     });
 
     it('should be readable after reading', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should not have called _read', () => {
-      iterator._read.should.not.have.been.called;
+      (iterator as any)._read.should.not.have.been.called;
     });
   });
 
   describe('A BufferedIterator with a synchronous flush', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._read = function (item, done) {
+      (iterator as any)._read = function (item, done) {
         this._push('a');
         this.close();
         done();
       };
-      iterator._flush = function (done) {
+      (iterator as any)._flush = function (done) {
         this._push('x');
         this._push('y');
         done();
@@ -1832,119 +1832,119 @@ describe('BufferedIterator', () => {
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[BufferedIterator {next: a, buffer: 3}]');
+      expect(iterator.toString()).toEqual('[BufferedIterator {next: a, buffer: 3}]');
     });
 
     describe('before reading an item', () => {
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the flushed items', () => {
       const items = [];
-      before(() => {
+      beforeEach(() => {
         for (let i = 0; i < 2; i++)
           items.push(iterator.read());
       });
 
       it('should have read the flushed items', () => {
-        items.should.deep.equal(['x', 'y']);
+        items.toEqual(['x', 'y']);
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A BufferedIterator with an asynchronous flush', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._read = function (item, done) {
+      (iterator as any)._read = function (item, done) {
         this._push('a');
         this.close();
         done();
       };
-      iterator._flush = function (done) {
+      (iterator as any)._flush = function (done) {
         scheduleTask(() => {
           this._push('x');
           this._push('y');
@@ -1955,114 +1955,114 @@ describe('BufferedIterator', () => {
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[BufferedIterator {next: a, buffer: 3}]');
+      expect(iterator.toString()).toEqual('[BufferedIterator {next: a, buffer: 3}]');
     });
 
     describe('before reading an item', () => {
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the flushed items', () => {
       const items = [];
-      before(() => {
+      beforeEach(() => {
         for (let i = 0; i < 2; i++)
           items.push(iterator.read());
       });
 
       it('should have read the flushed items', () => {
-        items.should.deep.equal(['x', 'y']);
+        items.toEqual(['x', 'y']);
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A BufferedIterator with `_flush` that calls `done` multiple times', () => {
     let iterator, flushDone;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._flush = done => { flushDone = done; };
+      (iterator as any)._flush = done => { flushDone = done; };
       iterator.close();
       iterator.read();
     });
@@ -2076,9 +2076,9 @@ describe('BufferedIterator', () => {
 
   describe('A BufferedIterator with `_flush` that does not call `done`', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._flush = function () { this._push('a'); };
+      (iterator as any)._flush = function () { this._push('a'); };
       iterator.close();
       captureEvents(iterator, 'end');
     });
@@ -2088,35 +2088,35 @@ describe('BufferedIterator', () => {
     });
 
     it('should return null on subsequent reads', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(0);
+      expect((iterator as any)._eventCounts.end).toEqual(0);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should not have been destroyed', () => {
-      iterator.destroyed.should.be.false;
+      expect(iterator.destroyed).toBe(false);
     });
 
     it('should not be done', () => {
-      iterator.done.should.be.false;
+      expect(iterator.done).toBe(false);
     });
   });
 
   describe('A BufferedIterator with a synchronous flush that is destroyed', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator({ maxBufferSize: 1 });
-      iterator._read = function (item, done) {
+      (iterator as any)._read = function (item, done) {
         this._push('a');
         done();
       };
-      iterator._flush = function (done) {
+      (iterator as any)._flush = function (done) {
         this._push('x');
         this._push('y');
         done();
@@ -2125,85 +2125,85 @@ describe('BufferedIterator', () => {
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[BufferedIterator {next: a, buffer: 1}]');
+      expect(iterator.toString()).toEqual('[BufferedIterator {next: a, buffer: 1}]');
     });
 
     describe('before reading an item', () => {
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the item and destroying', () => {
       let item;
-      before(() => {
+      beforeEach(() => {
         item = iterator.read();
         iterator.destroy();
       });
 
       it('should have read the item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should have been destroyed', () => {
-        iterator.destroyed.should.be.true;
+        expect(iterator.destroyed).toBe(true);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A BufferedIterator with an asynchronous flush that is destroyed', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator({ maxBufferSize: 1 });
-      iterator._read = function (item, done) {
+      (iterator as any)._read = function (item, done) {
         this._push('a');
         done();
       };
-      iterator._flush = function (done) {
+      (iterator as any)._flush = function (done) {
         scheduleTask(() => {
           this._push('x');
           this._push('y');
@@ -2214,106 +2214,106 @@ describe('BufferedIterator', () => {
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[BufferedIterator {next: a, buffer: 1}]');
+      expect(iterator.toString()).toEqual('[BufferedIterator {next: a, buffer: 1}]');
     });
 
     describe('before reading an item', () => {
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not have been destroyed', () => {
-        iterator.destroyed.should.be.false;
+        expect(iterator.destroyed).toBe(false);
       });
 
       it('should not be done', () => {
-        iterator.done.should.be.false;
+        expect(iterator.done).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the item and destroying', () => {
       let item;
-      before(() => {
+      beforeEach(() => {
         item = iterator.read();
         iterator.destroy();
       });
 
       it('should have read the item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should have been destroyed', () => {
-        iterator.destroyed.should.be.true;
+        expect(iterator.destroyed).toBe(true);
       });
 
       it('should be done', () => {
-        iterator.done.should.be.true;
+        expect(iterator.done).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A BufferedIterator created with a maximum buffer size', () => {
     it('changes non-numeric maximum buffer sizes into 4', () => {
-      (new BufferedIterator({ maxBufferSize: 'b' })).maxBufferSize.should.equal(4);
+      (new BufferedIterator({ maxBufferSize: 'b' })).maxBufferSize.toEqual(4);
     });
 
     it('changes negative maximum buffer sizes into 1', () => {
-      (new BufferedIterator({ maxBufferSize: -37 })).maxBufferSize.should.equal(1);
+      (new BufferedIterator({ maxBufferSize: -37 })).maxBufferSize.toEqual(1);
     });
 
     it('changes a 0 maximum buffer sizes into 1', () => {
-      (new BufferedIterator({ maxBufferSize: 0 })).maxBufferSize.should.equal(1);
+      (new BufferedIterator({ maxBufferSize: 0 })).maxBufferSize.toEqual(1);
     });
 
     it('retains a positive integer maximum buffer size', () => {
-      (new BufferedIterator({ maxBufferSize: 7 })).maxBufferSize.should.equal(7);
+      (new BufferedIterator({ maxBufferSize: 7 })).maxBufferSize.toEqual(7);
     });
 
     it('floors a positive non-integer maximum buffer size', () => {
-      (new BufferedIterator({ maxBufferSize: 7.5 })).maxBufferSize.should.equal(7);
+      (new BufferedIterator({ maxBufferSize: 7.5 })).maxBufferSize.toEqual(7);
     });
 
     it('retains an infinite maximum buffer size', () => {
-      (new BufferedIterator({ maxBufferSize: Infinity })).maxBufferSize.should.equal(Infinity);
+      (new BufferedIterator({ maxBufferSize: Infinity })).maxBufferSize.toEqual(Infinity);
     });
 
     describe('when changing the buffer size', () => {
       let iterator;
-      before(() => {
+      beforeEach(() => {
         iterator = new BufferedIterator({ maxBufferSize: 6 });
-        iterator._read = sinon.spy(function (count, done) {
+        (iterator as any)._read = sinon.spy(function (count, done) {
           for (let i = 0; i < 4; i++)
             this._push(i);
           done();
@@ -2322,35 +2322,35 @@ describe('BufferedIterator', () => {
 
       describe('before changing', () => {
         it('should have called _read', () => {
-          iterator._read.should.have.callCount(1);
+          (iterator as any)._read.should.have.callCount(1);
         });
       });
 
       describe('to a different value', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.maxBufferSize = 8.4;
         });
 
         it('should change the value', () => {
-          iterator.maxBufferSize.should.equal(8);
+          iterator.maxBufferSize.toEqual(8);
         });
 
         it('should have called _read again', () => {
-          iterator._read.should.have.callCount(2);
+          (iterator as any)._read.should.have.callCount(2);
         });
       });
 
       describe('to the same value', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.maxBufferSize = 8.6;
         });
 
         it('should not change the value', () => {
-          iterator.maxBufferSize.should.equal(8);
+          iterator.maxBufferSize.toEqual(8);
         });
 
         it('should not have called _read again', () => {
-          iterator._read.should.have.callCount(2);
+          (iterator as any)._read.should.have.callCount(2);
         });
       });
     });
@@ -2358,9 +2358,9 @@ describe('BufferedIterator', () => {
 
   describe('A BufferedIterator created with an infinite maximum buffer size', () => {
     let iterator, i = 0;
-    before(done => {
+    beforeEach(done => {
       iterator = new BufferedIterator({ maxBufferSize: Infinity });
-      iterator._read = sinon.spy(function (count, next) {
+      (iterator as any)._read = sinon.spy(function (count, next) {
         this._push(++i);
         if (i === 10) {
           this.close();
@@ -2371,19 +2371,19 @@ describe('BufferedIterator', () => {
     });
 
     it('reads the source until the end', () => {
-      iterator._read.should.have.callCount(10);
+      (iterator as any)._read.should.have.callCount(10);
     });
 
     it('calls `_read` on the source with a count of 128', () => {
-      iterator._read.getCall(0).args[0].should.equal(128);
+      (iterator as any)._read.getCall(0).args[0].toEqual(128);
     });
   });
 
   describe('A BufferedIterator create with a finite maximum buffer size', () => {
     let iterator, i = 0, beforeDone;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator({ maxBufferSize: 4 });
-      iterator._read = sinon.spy(function (count, next) {
+      (iterator as any)._read = sinon.spy(function (count, next) {
         this._push(++i);
         if (i === 10) {
           this.close();
@@ -2395,27 +2395,27 @@ describe('BufferedIterator', () => {
 
     describe('before the maximum buffer size is increased to infinity', () => {
       it('reads the source twice', () => {
-        iterator._read.should.have.callCount(2);
+        (iterator as any)._read.should.have.callCount(2);
       });
     });
 
     describe('after the maximum buffer size is increased to infinity', () => {
-      before(done => {
+      beforeEach(done => {
         iterator.maxBufferSize = Infinity;
         beforeDone = done;
       });
 
       it('reads the source until the end', () => {
-        iterator._read.should.have.callCount(10);
+        (iterator as any)._read.should.have.callCount(10);
       });
     });
   });
 
   describe('A BufferedIterator that is destroyed', () => {
     let iterator, i = 0;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._read = sinon.spy(function (count, next) {
+      (iterator as any)._read = sinon.spy(function (count, next) {
         this._push(++i);
         next();
       });
@@ -2424,55 +2424,55 @@ describe('BufferedIterator', () => {
     });
 
     it('should not call _read()', () => {
-      iterator._read.should.have.callCount(0);
+      (iterator as any)._read.should.have.callCount(0);
     });
 
     it('should allow pushing but have no effect', () => {
-      iterator._push(10);
-      iterator.toString().should.equal('[BufferedIterator {buffer: 0}]');
+      (iterator as any)._push(10);
+      expect(iterator.toString()).toEqual('[BufferedIterator {buffer: 0}]');
     });
 
     it('should have an empty buffer', () => {
-      iterator._buffer.length.should.equal(0);
+      (iterator as any)._buffer.length.toEqual(0);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should have been destroyed', () => {
-      iterator.destroyed.should.be.true;
+      expect(iterator.destroyed).toBe(true);
     });
 
     it('should be done', () => {
-      iterator.done.should.be.true;
+      expect(iterator.done).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('cannot be made readable again', () => {
       iterator.readable = true;
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when trying to read', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have any listeners for data, readable, or end', () => {
-      expect(iterator._events).to.not.contain.key('data');
-      expect(iterator._events).to.not.contain.key('readable');
-      expect(iterator._events).to.not.contain.key('end');
+      expect((iterator as any)._events).to.not.contain.key('data');
+      expect((iterator as any)._events).to.not.contain.key('readable');
+      expect((iterator as any)._events).to.not.contain.key('end');
     });
   });
 
   describe('A BufferedIterator that is destroyed after the first item', () => {
     let iterator, i = 0;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._read = sinon.spy(function (count, next) {
+      (iterator as any)._read = sinon.spy(function (count, next) {
         this._push(++i);
         next();
         if (i === 1)
@@ -2482,50 +2482,50 @@ describe('BufferedIterator', () => {
     });
 
     it('should have called _read() once', () => {
-      iterator._read.should.have.callCount(1);
+      (iterator as any)._read.should.have.callCount(1);
     });
 
     it('should have an empty buffer', () => {
-      iterator._buffer.length.should.equal(0);
+      (iterator as any)._buffer.length.toEqual(0);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should have been destroyed', () => {
-      iterator.destroyed.should.be.true;
+      expect(iterator.destroyed).toBe(true);
     });
 
     it('should be done', () => {
-      iterator.done.should.be.true;
+      expect(iterator.done).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('cannot be made readable again', () => {
       iterator.readable = true;
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when trying to read', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have any listeners for data, readable, or end', () => {
-      expect(iterator._events).to.not.contain.key('data');
-      expect(iterator._events).to.not.contain.key('readable');
-      expect(iterator._events).to.not.contain.key('end');
+      expect((iterator as any)._events).to.not.contain.key('data');
+      expect((iterator as any)._events).to.not.contain.key('readable');
+      expect((iterator as any)._events).to.not.contain.key('end');
     });
   });
 
   describe('A BufferedIterator that is destroyed after the first item but before the next call', () => {
     let iterator, i = 0;
-    before(() => {
+    beforeEach(() => {
       iterator = new BufferedIterator();
-      iterator._read = sinon.spy(function (count, next) {
+      (iterator as any)._read = sinon.spy(function (count, next) {
         this._push(++i);
         if (i === 1)
           iterator.destroy();
@@ -2535,42 +2535,42 @@ describe('BufferedIterator', () => {
     });
 
     it('should have called _read() once', () => {
-      iterator._read.should.have.callCount(1);
+      (iterator as any)._read.should.have.callCount(1);
     });
 
     it('should have an empty buffer', () => {
-      iterator._buffer.length.should.equal(0);
+      (iterator as any)._buffer.length.toEqual(0);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
 
     it('should have been destroyed', () => {
-      iterator.destroyed.should.be.true;
+      expect(iterator.destroyed).toBe(true);
     });
 
     it('should be done', () => {
-      iterator.done.should.be.true;
+      expect(iterator.done).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('cannot be made readable again', () => {
       iterator.readable = true;
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when trying to read', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
 
     it('should not have any listeners for data, readable, or end', () => {
-      expect(iterator._events).to.not.contain.key('data');
-      expect(iterator._events).to.not.contain.key('readable');
-      expect(iterator._events).to.not.contain.key('end');
+      expect((iterator as any)._events).to.not.contain.key('data');
+      expect((iterator as any)._events).to.not.contain.key('readable');
+      expect((iterator as any)._events).to.not.contain.key('end');
     });
   });
 });

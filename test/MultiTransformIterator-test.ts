@@ -7,127 +7,127 @@ import {
   SingletonIterator,
   ArrayIterator,
   scheduleTask,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
 
 describe('MultiTransformIterator', () => {
   describe('The MultiTransformIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new MultiTransformIterator(); });
+      let instance: MultiTransformIterator<never, never>;
+      beforeEach(() => { instance = new MultiTransformIterator(); });
 
       it('should be a MultiTransformIterator object', () => {
-        instance.should.be.an.instanceof(MultiTransformIterator);
+        expect(instance).toBeInstanceOf(MultiTransformIterator);
       });
 
       it('should be a TransformIterator object', () => {
-        instance.should.be.an.instanceof(TransformIterator);
+        expect(instance).toBeInstanceOf(TransformIterator);
       });
 
       it('should be a BufferedIterator object', () => {
-        instance.should.be.an.instanceof(BufferedIterator);
+        expect(instance).toBeInstanceOf(BufferedIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
 
   describe('A MultiTransformIterator without options', () => {
-    let iterator, source;
-    before(() => {
+    let iterator: MultiTransformIterator<string, string>, source;
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       iterator = new MultiTransformIterator(source);
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return items as they are', () => {
-        items.should.deep.equal(['a', 'b', 'c', 'd', 'e', 'f']);
+        expect(items).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
       });
     });
   });
 
   describe('A MultiTransformIterator with transformers that emit 0 items', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       iterator = new MultiTransformIterator(source, { autoStart: false });
-      iterator._createTransformer = sinon.spy(() => new EmptyIterator());
+      (iterator as any)._createTransformer = sinon.spy(() => new EmptyIterator());
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should not return any items', () => {
-        items.should.deep.equal([]);
+        items.toEqual([]);
       });
 
       it('should have called _createTransformer for each item', () => {
-        iterator._createTransformer.should.have.callCount(6);
-        iterator._createTransformer.getCall(0).args.should.deep.equal(['a']);
-        iterator._createTransformer.getCall(1).args.should.deep.equal(['b']);
-        iterator._createTransformer.getCall(2).args.should.deep.equal(['c']);
-        iterator._createTransformer.getCall(3).args.should.deep.equal(['d']);
-        iterator._createTransformer.getCall(4).args.should.deep.equal(['e']);
-        iterator._createTransformer.getCall(5).args.should.deep.equal(['f']);
+        (iterator as any)._createTransformer.should.have.callCount(6);
+        (iterator as any)._createTransformer.getCall(0).args.toEqual(['a']);
+        (iterator as any)._createTransformer.getCall(1).args.toEqual(['b']);
+        (iterator as any)._createTransformer.getCall(2).args.toEqual(['c']);
+        (iterator as any)._createTransformer.getCall(3).args.toEqual(['d']);
+        (iterator as any)._createTransformer.getCall(4).args.toEqual(['e']);
+        (iterator as any)._createTransformer.getCall(5).args.toEqual(['f']);
       });
     });
   });
 
   describe('A MultiTransformIterator with transformers that synchronously emit 1 item', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       iterator = new MultiTransformIterator(source);
-      iterator._createTransformer = sinon.spy(item => new SingletonIterator(`${item}1`));
+      (iterator as any)._createTransformer = sinon.spy(item => new SingletonIterator(`${item}1`));
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items', () => {
-        items.should.deep.equal(['a1', 'b1', 'c1', 'd1', 'e1', 'f1']);
+        items.toEqual(['a1', 'b1', 'c1', 'd1', 'e1', 'f1']);
       });
     });
   });
 
   describe('A MultiTransformIterator with transformers that synchronously emit 3 items', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       iterator = new MultiTransformIterator(source);
-      iterator._createTransformer = sinon.spy(item => new ArrayIterator([`${item}1`, `${item}2`, `${item}3`]));
+      (iterator as any)._createTransformer = sinon.spy(item => new ArrayIterator([`${item}1`, `${item}2`, `${item}3`]));
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items', () => {
-        items.should.deep.equal([
+        items.toEqual([
           'a1', 'a2', 'a3',
           'b1', 'b2', 'b3',
           'c1', 'c2', 'c3',
@@ -140,11 +140,11 @@ describe('MultiTransformIterator', () => {
   });
 
   describe('A MultiTransformIterator with transformers that asynchronously close', () => {
-    let iterator, source;
-    before(() => {
+    let iterator: MultiTransformIterator<string, string>, source;
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       iterator = new MultiTransformIterator(source);
-      iterator._createTransformer = sinon.spy(() => {
+      (iterator as any)._createTransformer = sinon.spy(() => {
         const transformer = new BufferedIterator();
         setTimeout(() => transformer.close(), 0);
         return transformer;
@@ -152,37 +152,37 @@ describe('MultiTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should not return any items', () => {
-        items.should.deep.equal([]);
+        items.toEqual([]);
       });
 
       it('should have called _createTransformer for each item', () => {
-        iterator._createTransformer.should.have.callCount(6);
-        iterator._createTransformer.getCall(0).args.should.deep.equal(['a']);
-        iterator._createTransformer.getCall(1).args.should.deep.equal(['b']);
-        iterator._createTransformer.getCall(2).args.should.deep.equal(['c']);
-        iterator._createTransformer.getCall(3).args.should.deep.equal(['d']);
-        iterator._createTransformer.getCall(4).args.should.deep.equal(['e']);
-        iterator._createTransformer.getCall(5).args.should.deep.equal(['f']);
+        (iterator as any)._createTransformer.should.have.callCount(6);
+        (iterator as any)._createTransformer.getCall(0).args.toEqual(['a']);
+        (iterator as any)._createTransformer.getCall(1).args.toEqual(['b']);
+        (iterator as any)._createTransformer.getCall(2).args.toEqual(['c']);
+        (iterator as any)._createTransformer.getCall(3).args.toEqual(['d']);
+        (iterator as any)._createTransformer.getCall(4).args.toEqual(['e']);
+        (iterator as any)._createTransformer.getCall(5).args.toEqual(['f']);
       });
     });
   });
 
   describe('A MultiTransformIterator with transformers that asynchronously emit 1 item', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       iterator = new MultiTransformIterator(source);
-      iterator._createTransformer = sinon.spy(item => {
+      (iterator as any)._createTransformer = sinon.spy(item => {
         const transformer = new BufferedIterator();
         scheduleTask(() => {
-          transformer._push(`${item}1`);
+          (transformer as any)._push(`${item}1`);
           transformer.close();
         });
         return transformer;
@@ -190,29 +190,29 @@ describe('MultiTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items', () => {
-        items.should.deep.equal(['a1', 'b1', 'c1', 'd1', 'e1', 'f1']);
+        items.toEqual(['a1', 'b1', 'c1', 'd1', 'e1', 'f1']);
       });
     });
   });
 
   describe('A MultiTransformIterator with transformers that asynchronously emit 3 items', () => {
-    let iterator, source;
-    before(() => {
+    let iterator: MultiTransformIterator<string, string>, source;
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       iterator = new MultiTransformIterator(source);
-      iterator._createTransformer = sinon.spy(item => {
+      (iterator as any)._createTransformer = sinon.spy(item => {
         const transformer = new BufferedIterator();
         scheduleTask(() => {
-          transformer._push(`${item}1`);
-          transformer._push(`${item}2`);
-          transformer._push(`${item}3`);
+          (transformer as any)._push(`${item}1`);
+          (transformer as any)._push(`${item}2`);
+          (transformer as any)._push(`${item}3`);
           transformer.close();
         });
         return transformer;
@@ -220,14 +220,14 @@ describe('MultiTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items', () => {
-        items.should.deep.equal([
+        expect(items).toEqual([
           'a1', 'a2', 'a3',
           'b1', 'b2', 'b3',
           'c1', 'c2', 'c3',
@@ -240,11 +240,11 @@ describe('MultiTransformIterator', () => {
   });
 
   describe('A MultiTransformIterator with optional set to false', () => {
-    let iterator, source;
-    before(() => {
+    let iterator: MultiTransformIterator<number, number>, source: ArrayIterator<number>;
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3, 4, 5, 6]);
       iterator = new MultiTransformIterator(source, { optional: false });
-      iterator._createTransformer = sinon.spy(item => {
+      (iterator as any)._createTransformer = sinon.spy(item => {
         switch (item) {
         case 3: return new EmptyIterator();
         case 6: return null;
@@ -254,24 +254,24 @@ describe('MultiTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items only', () => {
-        items.should.deep.equal(['t1', 't2', 't4', 't5']);
+        items.toEqual(['t1', 't2', 't4', 't5']);
       });
     });
   });
 
   describe('A MultiTransformIterator with optional set to true', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3, 4, 5, 6]);
       iterator = new MultiTransformIterator(source, { optional: true });
-      iterator._createTransformer = sinon.spy(item => {
+      (iterator as any)._createTransformer = sinon.spy(item => {
         switch (item) {
         case 3: return new EmptyIterator();
         case 6: return null;
@@ -281,24 +281,24 @@ describe('MultiTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items, and originals when the transformer is empty', () => {
-        items.should.deep.equal(['t1', 't2', 3, 't4', 't5', 6]);
+        items.toEqual(['t1', 't2', 3, 't4', 't5', 6]);
       });
     });
   });
 
   describe('A MultiTransformIterator with transformers that error', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       iterator = new MultiTransformIterator(source);
-      iterator._createTransformer = sinon.spy(item => {
+      (iterator as any)._createTransformer = sinon.spy(item => {
         const transformer = new BufferedIterator();
         scheduleTask(() => {
           transformer.emit('error', new Error(`Error ${item}`));
@@ -309,20 +309,20 @@ describe('MultiTransformIterator', () => {
     });
 
     it('should emit `bufferSize` errors', () => {
-      iterator._eventCounts.error.should.equal(4);
+      (iterator as any)._eventCounts.error.toEqual(4);
     });
   });
 
   describe('A MultiTransformIterator with a multiTransform option', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       const multiTransform = sinon.spy(item => {
         const transformer = new BufferedIterator();
         scheduleTask(() => {
-          transformer._push(`${item}1`);
-          transformer._push(`${item}2`);
-          transformer._push(`${item}3`);
+          (transformer as any)._push(`${item}1`);
+          (transformer as any)._push(`${item}2`);
+          (transformer as any)._push(`${item}3`);
           transformer.close();
         });
         return transformer;
@@ -331,14 +331,14 @@ describe('MultiTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items', () => {
-        items.should.deep.equal([
+        items.toEqual([
           'a1', 'a2', 'a3',
           'b1', 'b2', 'b3',
           'c1', 'c2', 'c3',
@@ -352,14 +352,14 @@ describe('MultiTransformIterator', () => {
 
   describe('A MultiTransformIterator with a direct multiTransform argument', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a', 'b', 'c', 'd', 'e', 'f']);
       const multiTransform = sinon.spy(item => {
         const transformer = new BufferedIterator();
         scheduleTask(() => {
-          transformer._push(`${item}1`);
-          transformer._push(`${item}2`);
-          transformer._push(`${item}3`);
+          (transformer as any)._push(`${item}1`);
+          (transformer as any)._push(`${item}2`);
+          (transformer as any)._push(`${item}3`);
           transformer.close();
         });
         return transformer;
@@ -368,14 +368,14 @@ describe('MultiTransformIterator', () => {
     });
 
     describe('when reading items', () => {
-      const items = [];
-      before(done => {
+      const items: string[] = [];
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items', () => {
-        items.should.deep.equal([
+        items.toEqual([
           'a1', 'a2', 'a3',
           'b1', 'b2', 'b3',
           'c1', 'c2', 'c3',

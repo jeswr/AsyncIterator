@@ -2,76 +2,77 @@ import {
   AsyncIterator,
   EmptyIterator,
   empty,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
+import { expect } from 'chai';
 
 describe('EmptyIterator', () => {
   describe('The EmptyIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new EmptyIterator(); });
+      let instance: EmptyIterator<never>;
+      beforeEach(() => { instance = new EmptyIterator(); });
 
       it('should be an EmptyIterator object', () => {
-        instance.should.be.an.instanceof(EmptyIterator);
+        expect(instance).toBeInstanceOf(EmptyIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
 
     describe('the result when called through `.empty`', () => {
-      let instance;
-      before(() => { instance = empty(); });
+      let instance: EmptyIterator<never>;
+      beforeEach(() => { instance = empty(); });
 
       it('should be an EmptyIterator object', () => {
-        instance.should.be.an.instanceof(EmptyIterator);
+        expect(instance).toBeInstanceOf(EmptyIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
 
   describe('An EmptyIterator without arguments', () => {
-    let iterator;
-    before(() => {
+    let iterator: EmptyIterator<never>;
+    beforeEach(() => {
       iterator = new EmptyIterator();
       captureEvents(iterator, 'readable', 'end');
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[EmptyIterator]');
+      expect(iterator.toString()).toEqual('[EmptyIterator]');
     });
 
     it('should not have emitted the `readable` event', () => {
-      iterator._eventCounts.readable.should.equal(0);
+      expect((iterator as any)._eventCounts.readable).toEqual(0);
     });
 
     it('should have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(1);
+      expect((iterator as any)._eventCounts.end).toEqual(1);
     });
 
     it('should have ended', () => {
-      iterator.ended.should.be.true;
+      expect(iterator.ended).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when read is called', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
   });
 });

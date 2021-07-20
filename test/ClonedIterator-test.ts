@@ -5,41 +5,42 @@ import {
   BufferedIterator,
   EmptyIterator,
   ArrayIterator,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
+import { expect } from 'chai';
 
 describe('ClonedIterator', () => {
   describe('The ClonedIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new ClonedIterator(); });
+      let instance: ClonedIterator<never>;
+      beforeEach(() => { instance = new ClonedIterator(); });
 
       it('should be a ClonedIterator object', () => {
-        instance.should.be.an.instanceof(ClonedIterator);
+        expect(instance).toBeInstanceOf(ClonedIterator);
       });
 
       it('should be a TransformIterator object', () => {
-        instance.should.be.an.instanceof(TransformIterator);
+        expect(instance).toBeInstanceOf(TransformIterator);
       });
 
       it('should be a BufferedIterator object', () => {
-        instance.should.be.an.instanceof(BufferedIterator);
+        expect(instance).toBeInstanceOf(BufferedIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
 
   describe('A ClonedIterator without source', () => {
-    let clone;
-    before(() => {
+    let clone: ClonedIterator<never>;
+    beforeEach(() => {
       clone = new ClonedIterator();
       captureEvents(clone, 'readable', 'end');
     });
@@ -50,36 +51,36 @@ describe('ClonedIterator', () => {
       });
 
       it('should provide a readable `toString` representation', () => {
-        clone.toString().should.equal('[ClonedIterator {source: none}]');
+        expect(clone.toString()).toEqual('[ClonedIterator {source: none}]');
       });
 
       it('should not have emitted the `readable` event', () => {
-        clone._eventCounts.readable.should.equal(0);
+        (clone as any)._eventCounts.readable.toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        clone._eventCounts.end.should.equal(0);
+        (clone as any)._eventCounts.end.toEqual(0);
       });
 
       it('should not have ended', () => {
-        clone.ended.should.be.false;
+        expect(clone.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        clone.readable.should.be.false;
+        expect(clone.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(clone.read()).to.be.null;
+        expect(clone.read()).toBe(null);
       });
 
       it('should return an empty property set', () => {
-        clone.getProperties().should.deep.equal({});
+        clone.getProperties().toEqual({});
       });
     });
 
     describe('after closing', () => {
-      before(() => {
+      beforeEach(() => {
         clone.close();
       });
 
@@ -88,27 +89,27 @@ describe('ClonedIterator', () => {
       });
 
       it('should not have emitted the `readable` event', () => {
-        clone._eventCounts.readable.should.equal(0);
+        (clone as any)._eventCounts.readable.toEqual(0);
       });
 
       it('should have emitted the `end` event', () => {
-        clone._eventCounts.end.should.equal(1);
+        (clone as any)._eventCounts.end.toEqual(1);
       });
 
       it('should have ended', () => {
-        clone.ended.should.be.true;
+        expect(clone.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        clone.readable.should.be.false;
+        clone.readable.toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(clone.read()).to.be.null;
+        expect(clone.read()).toBe(null);
       });
 
       it('should return an empty property set', () => {
-        clone.getProperties().should.deep.equal({});
+        clone.getProperties().toEqual({});
       });
     });
   });
@@ -126,31 +127,31 @@ describe('ClonedIterator', () => {
 
     describeClones(clones, (getClone, getIterator) => {
       it('should have the original iterator as source', () => {
-        getClone().source.should.equal(getIterator());
+        getClone().source.toEqual(getIterator());
       });
 
       it('should provide a readable `toString` representation', () => {
-        getClone().toString().should.equal('[ClonedIterator {source: [EmptyIterator]}]');
+        getClone().toString().toEqual('[ClonedIterator {source: [EmptyIterator]}]');
       });
 
       it('should not have emitted the `readable` event', () => {
-        getClone()._eventCounts.readable.should.equal(0);
+        getClone()._eventCounts.readable.toEqual(0);
       });
 
       it('should have emitted the `end` event', () => {
-        getClone()._eventCounts.end.should.equal(1);
+        getClone()._eventCounts.end.toEqual(1);
       });
 
       it('should have ended', () => {
-        getClone().ended.should.be.true;
+        getClone().ended.toBe(true);
       });
 
       it('should not be readable', () => {
-        getClone().readable.should.be.false;
+        getClone().readable.toBe(false);
       });
 
       it('should return null on read', () => {
-        expect(getClone().read()).to.be.null;
+        expect(getClone().read()).toBe(null);
       });
     });
   });
@@ -161,30 +162,30 @@ describe('ClonedIterator', () => {
     function beforeClosing(getClone, getIterator, index) {
       describe('before closing', () => {
         it('should have the original iterator as source', () => {
-          getClone().source.should.equal(getIterator());
+          getClone().source.toEqual(getIterator());
         });
 
         if (index === 0) {
           it('should not have emitted the `readable` event', () => {
-            getClone()._eventCounts.readable.should.equal(0);
+            getClone()._eventCounts.readable.toEqual(0);
           });
         }
 
         it('should not have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(0);
+          getClone()._eventCounts.end.toEqual(0);
         });
 
         it('should not have ended', () => {
-          getClone().ended.should.be.false;
+          getClone().ended.toBe(false);
         });
 
         if (index === 0) {
           it('should not be readable', () => {
-            getClone().readable.should.be.false;
+            getClone().readable.toBe(false);
           });
 
           it('should return null on read', () => {
-            expect(getClone().read()).to.be.null;
+            expect(getClone().read()).toBe(null);
           });
         }
       });
@@ -193,22 +194,22 @@ describe('ClonedIterator', () => {
     function afterItem(getClone, getIterator, index) {
       describe('after emitting an item', () => {
         if (index === 0)
-          before(() => { getIterator()._push('a'); });
+          beforeEach(() => { getIterator()._push('a'); });
 
         it('should have emitted the `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(0);
+          getClone()._eventCounts.end.toEqual(0);
         });
 
         it('should not have ended', () => {
-          getClone().ended.should.be.false;
+          getClone().ended.toBe(false);
         });
 
         it('should be readable', () => {
-          getClone().readable.should.be.true;
+          getClone().readable.toBe(true);
         });
 
         it('should read the item', () => {
@@ -220,26 +221,26 @@ describe('ClonedIterator', () => {
     function afterClosing(getClone, getIterator, index) {
       describe('after closing', () => {
         if (index === 0)
-          before(() => { getIterator().close(); });
+          beforeEach(() => { getIterator().close(); });
 
         it('should not have emitted anymore `readable` events', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
 
         it('should have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(1);
+          getClone()._eventCounts.end.toEqual(1);
         });
 
         it('should have ended', () => {
-          getClone().ended.should.be.true;
+          getClone().ended.toBe(true);
         });
 
         it('should not be readable', () => {
-          getClone().readable.should.be.false;
+          getClone().readable.toBe(false);
         });
 
         it('should return null on read', () => {
-          expect(getClone().read()).to.be.null;
+          expect(getClone().read()).toBe(null);
         });
       });
     }
@@ -267,23 +268,23 @@ describe('ClonedIterator', () => {
     function beforeReading(getClone, getIterator) {
       describe('before reading an item', () => {
         it('should have the original iterator as source', () => {
-          getClone().source.should.equal(getIterator());
+          getClone().source.toEqual(getIterator());
         });
 
         it('should have emitted the `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(0);
+          getClone()._eventCounts.end.toEqual(0);
         });
 
         it('should not have ended', () => {
-          getClone().ended.should.be.false;
+          getClone().ended.toBe(false);
         });
 
         it('should be readable', () => {
-          getClone().readable.should.be.true;
+          getClone().readable.toBe(true);
         });
       });
     }
@@ -291,30 +292,30 @@ describe('ClonedIterator', () => {
     function afterReading(getClone) {
       describe('after reading an item', () => {
         let item;
-        before(() => { item = getClone().read(); });
+        beforeEach(() => { item = getClone().read(); });
 
         it('should have read the item', () => {
           expect(item).to.equal('a');
         });
 
         it('should not have emitted the `readable` event anymore', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
 
         it('should have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(1);
+          getClone()._eventCounts.end.toEqual(1);
         });
 
         it('should have ended', () => {
-          getClone().ended.should.be.true;
+          getClone().ended.toBe(true);
         });
 
         it('should not be readable', () => {
-          getClone().readable.should.be.false;
+          getClone().readable.toBe(false);
         });
 
         it('should return null on read', () => {
-          expect(getClone().read()).to.be.null;
+          expect(getClone().read()).toBe(null);
         });
       });
     }
@@ -340,23 +341,23 @@ describe('ClonedIterator', () => {
     function beforeReading(getClone, getIterator) {
       describe('before reading an item', () => {
         it('should have the original iterator as source', () => {
-          getClone().source.should.equal(getIterator());
+          getClone().source.toEqual(getIterator());
         });
 
         it('should have emitted the `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(0);
+          getClone()._eventCounts.end.toEqual(0);
         });
 
         it('should not have ended', () => {
-          getClone().ended.should.be.false;
+          getClone().ended.toBe(false);
         });
 
         it('should be readable', () => {
-          getClone().readable.should.be.true;
+          getClone().readable.toBe(true);
         });
       });
     }
@@ -364,26 +365,26 @@ describe('ClonedIterator', () => {
     function afterReadingFirst(getClone) {
       describe('after reading the first item', () => {
         let item;
-        before(() => { item = getClone().read(); });
+        beforeEach(() => { item = getClone().read(); });
 
         it('should have read the item', () => {
           expect(item).to.equal('a');
         });
 
         it('should not have emitted the `readable` event anymore', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
 
         it('should not have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(0);
+          getClone()._eventCounts.end.toEqual(0);
         });
 
         it('should not have ended', () => {
-          getClone().ended.should.be.false;
+          getClone().ended.toBe(false);
         });
 
         it('should be readable', () => {
-          getClone().readable.should.be.true;
+          getClone().readable.toBe(true);
         });
       });
     }
@@ -391,7 +392,7 @@ describe('ClonedIterator', () => {
     function afterReadingSecond(getClone) {
       describe('after reading the second item', () => {
         let item;
-        before(() => { item = getClone().read(); });
+        beforeEach(() => { item = getClone().read(); });
 
         it('should have read the item', () => {
           if (!getClone().closedBeforeReadingItem2)
@@ -399,23 +400,23 @@ describe('ClonedIterator', () => {
         });
 
         it('should not have emitted the `readable` event anymore', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
 
         it('should have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(1);
+          getClone()._eventCounts.end.toEqual(1);
         });
 
         it('should have ended', () => {
-          getClone().ended.should.be.true;
+          getClone().ended.toBe(true);
         });
 
         it('should not be readable', () => {
-          getClone().readable.should.be.false;
+          getClone().readable.toBe(false);
         });
 
         it('should return null on read', () => {
-          expect(getClone().read()).to.be.null;
+          expect(getClone().read()).toBe(null);
         });
       });
     }
@@ -441,7 +442,7 @@ describe('ClonedIterator', () => {
       describeClones(clones, beforeReading);
       describeClones(clones, afterReadingFirst);
       describe('after clone 2 is closed', () => {
-        before(() => {
+        beforeEach(() => {
           clones['clone 2']().close();
           clones['clone 2']().closedBeforeReadingItem2 = true;
         });
@@ -452,7 +453,7 @@ describe('ClonedIterator', () => {
 
   describe('Cloning an iterator with properties', () => {
     let iterator, clone;
-    before(() => {
+    beforeEach(() => {
       iterator = new AsyncIterator();
       iterator.setProperty('foo', 'FOO');
       iterator.setProperty('bar', 'BAR');
@@ -461,13 +462,13 @@ describe('ClonedIterator', () => {
 
     describe('before a property is set on the clone', () => {
       let callback;
-      before(() => {
+      beforeEach(() => {
         callback = sinon.stub();
         clone.getProperty('foo', callback);
       });
 
       it('should return all properties from the original', () => {
-        clone.getProperties().should.deep.equal({ foo: 'FOO', bar: 'BAR' });
+        clone.getProperties().toEqual({ foo: 'FOO', bar: 'BAR' });
       });
 
       it('should return the property from the original without callback', () => {
@@ -482,14 +483,14 @@ describe('ClonedIterator', () => {
 
     describe('after a property is changed on the original', () => {
       let callback;
-      before(() => {
+      beforeEach(() => {
         iterator.setProperty('foo', 'FOO2');
         callback = sinon.stub();
         clone.getProperty('foo', callback);
       });
 
       it('should return all properties from the original', () => {
-        clone.getProperties().should.deep.equal({ foo: 'FOO2', bar: 'BAR' });
+        clone.getProperties().toEqual({ foo: 'FOO2', bar: 'BAR' });
       });
 
       it('should return the property from the original without callback', () => {
@@ -504,7 +505,7 @@ describe('ClonedIterator', () => {
 
     describe('after a property is set on the clone', () => {
       let callback;
-      before(() => {
+      beforeEach(() => {
         clone.setProperty('bar', 'NEWBAR');
         callback = sinon.stub();
         clone.getProperty('bar', callback);
@@ -515,7 +516,7 @@ describe('ClonedIterator', () => {
       });
 
       it('should return all properties', () => {
-        clone.getProperties().should.deep.equal({ foo: 'FOO2', bar: 'NEWBAR' });
+        clone.getProperties().toEqual({ foo: 'FOO2', bar: 'NEWBAR' });
       });
 
       it('should return the new property without callback', () => {
@@ -530,7 +531,7 @@ describe('ClonedIterator', () => {
 
     describe('a property callback for a property first set on the clone', () => {
       let callback;
-      before(() => {
+      beforeEach(() => {
         callback = sinon.stub();
         clone.getProperty('cloneFirst', callback);
       });
@@ -542,7 +543,7 @@ describe('ClonedIterator', () => {
       });
 
       describe('after the property is set on the clone', () => {
-        before(() => {
+        beforeEach(() => {
           clone.setProperty('cloneFirst', 'CLONE');
           callback.should.not.have.been.called;
         });
@@ -558,7 +559,7 @@ describe('ClonedIterator', () => {
       });
 
       describe('after the property is set on the original', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('cloneFirst', 'ORIGINAL');
         });
 
@@ -574,7 +575,7 @@ describe('ClonedIterator', () => {
 
     describe('a property callback for a property first set on the original', () => {
       let callback;
-      before(() => {
+      beforeEach(() => {
         callback = sinon.stub();
         clone.getProperty('originalFirst', callback);
       });
@@ -586,7 +587,7 @@ describe('ClonedIterator', () => {
       });
 
       describe('after the property is set on the original', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('originalFirst', 'ORIGINAL');
           callback.should.not.have.been.called;
         });
@@ -602,7 +603,7 @@ describe('ClonedIterator', () => {
       });
 
       describe('after the property is set on the clone', () => {
-        before(() => {
+        beforeEach(() => {
           iterator.setProperty('originalFirst', 'CLONE');
         });
 
@@ -620,19 +621,19 @@ describe('ClonedIterator', () => {
   describe('Cloning an iterator that becomes readable later on', () => {
     const clones = createClones(() => new BufferedIterator());
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = clones.iterator();
-      iterator._push(1);
+      (iterator as any)._push(1);
     });
 
     describe('before the first item is read', () => {
       describeClones(clones, getClone => {
         it('should be readable', () => {
-          getClone().readable.should.be.true;
+          getClone().readable.toBe(true);
         });
 
         it('should have emitted the `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
       });
     });
@@ -640,18 +641,18 @@ describe('ClonedIterator', () => {
     describe('after the first item is read', () => {
       describeClones(clones, getClone => {
         let item;
-        before(() => { item = getClone().read(); });
+        beforeEach(() => { item = getClone().read(); });
 
         it('should have read the item correctly', () => {
-          item.should.equal(1);
+          expect(item).toEqual(1);
         });
 
         it('should be readable', () => {
-          getClone().readable.should.be.true;
+          getClone().readable.toBe(true);
         });
 
         it('should not have emitted another `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
       });
     });
@@ -659,32 +660,32 @@ describe('ClonedIterator', () => {
     describe('after trying to read the second item', () => {
       describeClones(clones, getClone => {
         let item;
-        before(() => { item = getClone().read(); });
+        beforeEach(() => { item = getClone().read(); });
 
         it('should not have read an item', () => {
-          expect(item).to.be.null;
+          expect(item).toBe(null);
         });
 
         it('should not be readable', () => {
-          getClone().readable.should.be.false;
+          getClone().readable.toBe(false);
         });
 
         it('should not have emitted another `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.toEqual(1);
         });
       });
     });
 
     describe('after the second item is pushed', () => {
-      before(() => { iterator._push(2); });
+      beforeEach(() => { (iterator as any)._push(2); });
 
       describeClones(clones, getClone => {
         it('should be readable', () => {
-          getClone().readable.should.be.true;
+          getClone().readable.toBe(true);
         });
 
         it('should have emitted another `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(2);
+          getClone()._eventCounts.readable.toEqual(2);
         });
       });
     });
@@ -692,14 +693,14 @@ describe('ClonedIterator', () => {
     describe('after reading the second item', () => {
       describeClones(clones, getClone => {
         let item;
-        before(() => { item = getClone().read(); });
+        beforeEach(() => { item = getClone().read(); });
 
         it('should have read the item correctly', () => {
-          item.should.equal(2);
+          expect(item).toEqual(2);
         });
 
         it('should be readable', () => {
-          getClone().readable.should.be.true;
+          getClone().readable.toBe(true);
         });
       });
     });
@@ -708,13 +709,13 @@ describe('ClonedIterator', () => {
   describe('Cloning an iterator that errors', () => {
     const clones = createClones(() => new AsyncIterator());
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = clones.iterator();
     });
 
     describe('before an error occurs', () => {
       describeClones(clones, getClone => {
-        before(() => {
+        beforeEach(() => {
           getClone().errorHandler = sinon.stub();
           getClone().on('error', getClone().errorHandler);
         });
@@ -727,7 +728,7 @@ describe('ClonedIterator', () => {
 
     describe('after a first error occurs', () => {
       let error;
-      before(() => {
+      beforeEach(() => {
         iterator.emit('error', error = new Error('error1'));
       });
 
@@ -741,7 +742,7 @@ describe('ClonedIterator', () => {
 
     describe('after a second error occurs', () => {
       let error;
-      before(() => {
+      beforeEach(() => {
         iterator.emit('error', error = new Error('error2'));
       });
 
@@ -754,7 +755,7 @@ describe('ClonedIterator', () => {
     });
 
     describe('after the iterator has ended and errors again', () => {
-      before(done => {
+      beforeEach(done => {
         iterator.close();
         iterator.on('end', () => {
           function noop() { /* */ }
@@ -766,7 +767,7 @@ describe('ClonedIterator', () => {
       });
 
       it('should not leave any error handlers attached', () => {
-        iterator.listenerCount('error').should.equal(0);
+        iterator.listenerCount('error').toEqual(0);
       });
 
       describeClones(clones, getClone => {
@@ -783,30 +784,30 @@ describe('ClonedIterator', () => {
 
     describe('before a source is set', () => {
       describeClones(clones, getClone => {
-        before(() => {
+        beforeEach(() => {
           getClone().getProperty('a', getClone().callbackA = sinon.stub());
           getClone().getProperty('b', getClone().callbackB = sinon.stub());
           getClone().getProperty('c', getClone().callbackC = sinon.stub());
         });
 
         it('should not have emitted the `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(0);
+          getClone()._eventCounts.readable.toEqual(0);
         });
 
         it('should not have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(0);
+          getClone()._eventCounts.end.toEqual(0);
         });
 
         it('should not have ended', () => {
-          getClone().ended.should.be.false;
+          getClone().ended.toBe(false);
         });
 
         it('should not be readable', () => {
-          getClone().readable.should.be.false;
+          getClone().readable.toBe(false);
         });
 
         it('should return null on read', () => {
-          expect(getClone().read()).to.be.null;
+          expect(getClone().read()).toBe(null);
         });
 
         it('should not have called a property callback for a non-set property', () => {
@@ -818,7 +819,7 @@ describe('ClonedIterator', () => {
     });
 
     describe('after a source is set', () => {
-      before(() => {
+      beforeEach(() => {
         iterator = new AsyncIterator();
         iterator.setProperty('a', 'A');
         iterator.setProperty('b', 'B');
@@ -837,23 +838,23 @@ describe('ClonedIterator', () => {
 
       describeClones(clones, getClone => {
         it('should not have emitted the `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(0);
+          getClone()._eventCounts.readable.toEqual(0);
         });
 
         it('should not have emitted the `end` event', () => {
-          getClone()._eventCounts.end.should.equal(0);
+          getClone()._eventCounts.end.toEqual(0);
         });
 
         it('should not have ended', () => {
-          getClone().ended.should.be.false;
+          getClone().ended.toBe(false);
         });
 
         it('should not be readable', () => {
-          getClone().readable.should.be.false;
+          getClone().readable.toBe(false);
         });
 
         it('should return null on read', () => {
-          expect(getClone().read()).to.be.null;
+          expect(getClone().read()).toBe(null);
         });
 
         it('should have called a property callback for a property in the source', () => {
@@ -869,7 +870,7 @@ describe('ClonedIterator', () => {
     });
 
     describe('after a property is set on the source', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.setProperty('c', 'C');
         forEachClone(clones, getClone => {
           getClone().callbackC.should.not.have.been.called;
@@ -913,7 +914,7 @@ function describeClones(clones, describeClone) {
   forEachClone(clones, (getClone, id, index) => {
     describe(id, () => {
       // Pre-load the clone so events can fire
-      before(() => { getClone(); });
+      beforeEach(() => { getClone(); });
       describeClone(getClone, clones.iterator, index);
     });
   });

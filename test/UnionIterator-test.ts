@@ -7,43 +7,44 @@ import {
   union,
   range,
   scheduleTask,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
+import { expect } from 'chai';
 
 describe('UnionIterator', () => {
   describe('The UnionIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new UnionIterator(); });
+      let instance: UnionIterator<never>;
+      beforeEach(() => { instance = new UnionIterator([]); });
 
       it('should be a UnionIterator object', () => {
-        instance.should.be.an.instanceof(UnionIterator);
+        expect(instance).toBeInstanceOf(UnionIterator);
       });
 
       it('should be a AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
 
     describe('the result when called through `union`', () => {
-      let instance;
-      before(() => { instance = union(); });
+      let instance: UnionIterator<never>;
+      beforeEach(() => { instance = union<never>([]); });
 
       it('should be an UnionIterator object', () => {
-        instance.should.be.an.instanceof(UnionIterator);
+        expect(instance).toBeInstanceOf(UnionIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
@@ -70,140 +71,140 @@ describe('UnionIterator', () => {
 
   describe('when constructed with an array of 0 sources', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [];
       iterator = new UnionIterator(sources);
     });
 
     it('should have ended', () => {
-      iterator.ended.should.be.true;
+      expect(iterator.ended).toBe(true);
     });
   });
 
   describe('when constructed with an array of 0 sources without autoStart', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [];
       iterator = new UnionIterator(sources, { autoStart: false });
     });
 
     describe('before reading', () => {
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after reading', () => {
-      before(done => {
+      beforeEach(done => {
         iterator.read();
         scheduleTask(done);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
     });
   });
 
   describe('when constructed with an array of 1 source', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [range(0, 2)];
       iterator = new UnionIterator(sources);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
   });
 
   describe('when constructed with an array of 2 sources', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [range(0, 2), range(3, 6)];
       iterator = new UnionIterator(sources);
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
   });
 
   describe('when constructed with an empty iterator', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new UnionIterator(new EmptyIterator());
     });
 
     it('should have ended', () => {
-      iterator.ended.should.be.true;
+      expect(iterator.ended).toBe(true);
     });
   });
 
   describe('when constructed with an iterator of 0 sources', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [];
       iterator = new UnionIterator(new ArrayIterator(sources));
     });
 
     it('should have ended', () => {
-      iterator.ended.should.be.true;
+      expect(iterator.ended).toBe(true);
     });
   });
 
   describe('when constructed with an iterator of 0 sources without autoStart', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [];
       iterator = new UnionIterator(new ArrayIterator(sources), { autoStart: false });
     });
 
     describe('before reading', () => {
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after reading', () => {
-      before(done => {
+      beforeEach(done => {
         iterator.read();
         scheduleTask(done);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
     });
   });
 
   describe('when constructed with an iterator of 1 source', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [range(0, 2)];
       iterator = new UnionIterator(new ArrayIterator(sources));
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
   });
 
   describe('when constructed with an iterator of 2 sources', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [range(0, 2), range(3, 6)];
       iterator = new UnionIterator(new ArrayIterator(sources));
     });
 
     it('should not have ended', () => {
-      iterator.ended.should.be.false;
+      expect(iterator.ended).toBe(false);
     });
   });
 
   describe('when the source iterator emits an error', () => {
     let callback, error;
-    before(() => {
+    beforeEach(() => {
       const sources = new BufferedIterator();
       const iterator = new UnionIterator(sources);
       iterator.on('error', callback = sinon.spy());
@@ -218,7 +219,7 @@ describe('UnionIterator', () => {
 
   describe('when constructed with an iterator and with autoStart', () => {
     let iterator, sourceIterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [range(0, 2), range(3, 6)];
       sourceIterator = new ArrayIterator(sources);
       sinon.spy(sourceIterator, 'read');
@@ -231,7 +232,7 @@ describe('UnionIterator', () => {
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should pass errors', () => {
@@ -246,7 +247,7 @@ describe('UnionIterator', () => {
 
     describe('after reading', () => {
       let items;
-      before(async () => {
+      beforeEach(async () => {
         items = (await toArray(iterator)).sort();
       });
 
@@ -255,14 +256,14 @@ describe('UnionIterator', () => {
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
     });
   });
 
   describe('when constructed with an iterator and without autoStart', () => {
     let iterator, sourceIterator;
-    before(() => {
+    beforeEach(() => {
       const sources = [range(0, 2), range(3, 6)];
       sourceIterator = new ArrayIterator(sources);
       sinon.spy(sourceIterator, 'read');
@@ -275,7 +276,7 @@ describe('UnionIterator', () => {
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should pass errors', () => {
@@ -290,7 +291,7 @@ describe('UnionIterator', () => {
 
     describe('after reading', () => {
       let items;
-      before(async () => {
+      beforeEach(async () => {
         items = (await toArray(iterator)).sort();
       });
 
@@ -303,7 +304,7 @@ describe('UnionIterator', () => {
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
     });
   });
@@ -342,8 +343,8 @@ describe('UnionIterator', () => {
     });
 
     it('should allow the _read method to be called multiple times', () => {
-      iterator._read(1, noop);
-      iterator._read(1, noop);
+      (iterator as any)._read(1, noop);
+      (iterator as any)._read(1, noop);
     });
 
     it('should make a round-robin union of the data elements', async () => {
@@ -353,7 +354,7 @@ describe('UnionIterator', () => {
 
   describe('a UnionIterator with sources that are added dynamically', () => {
     let iterator, sources, sourceIterator;
-    before(() => {
+    beforeEach(() => {
       sourceIterator = new BufferedIterator();
       iterator = new UnionIterator(sourceIterator);
       sources = [
@@ -365,36 +366,36 @@ describe('UnionIterator', () => {
 
     describe('before sources are added', () => {
       it('returns null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not have ended', () => {
-        expect(iterator.ended).to.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after one source is added', () => {
-      before(() => {
-        sourceIterator._push(sources[0]);
+      beforeEach(() => {
+        source(iterator as any)._push(sources[0]);
       });
 
       it('should read the whole stream', () => {
         expect(iterator.read()).to.equal(0);
         expect(iterator.read()).to.equal(1);
         expect(iterator.read()).to.equal(2);
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not have ended', () => {
-        expect(iterator.ended).to.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
 
     describe('after two streams have been added', () => {
-      before(() => {
-        sourceIterator._push(sources[1]);
-        sourceIterator._push(sources[2]);
+      beforeEach(() => {
+        source(iterator as any)._push(sources[1]);
+        source(iterator as any)._push(sources[2]);
       });
 
       it('should read 2 streams in round-robin order', async () => {
@@ -409,42 +410,42 @@ describe('UnionIterator', () => {
 
         // Read remaining items
         expect(iterator.read()).to.equal(5);
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not have ended', () => {
-        expect(iterator.ended).to.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after the source stream ends', () => {
-      before(() => {
-        sourceIterator._end();
+      beforeEach(() => {
+        source(iterator as any)._end();
       });
 
       it('returns null on read', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should have ended', () => {
-        expect(iterator.ended).to.be.true;
+        expect(iterator.ended).toBe(true);
       });
     });
   });
 
   it('should end when the end event of the source stream is delayed', async () => {
     const delayed = new AsyncIterator();
-    const iterator = new UnionIterator(delayed);
+    const iterator = new UnionIterator([delayed]);
     delayed.readable = true;
     scheduleTask(() => delayed.close());
     (await toArray(iterator)).should.eql([]);
   });
 });
 
-function toArray(stream) {
-  return new Promise((resolve, reject) => {
-    const array = [];
-    stream.on('data', data => array.push(data));
+function toArray<T>(stream) {
+  return new Promise<T[]>((resolve, reject) => {
+    const array: T[] = [];
+    stream.on('data', (data: T) => array.push(data));
     stream.on('error', reject);
     stream.on('end', () => resolve(array));
   });

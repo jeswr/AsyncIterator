@@ -2,14 +2,14 @@ import {
   scheduleTask,
   getTaskScheduler,
   setTaskScheduler,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
-import createTaskScheduler from '../dist/taskscheduler.js';
+import createTaskScheduler from '../taskscheduler';
 
 describe('TaskScheduler', () => {
   describe('scheduleTask', () => {
     it('is a function', () => {
-      expect(scheduleTask).to.be.an.instanceof(Function);
+      expect(scheduleTask).toBeInstanceOf(Function);
     });
 
     it('schedules a task', done => {
@@ -19,7 +19,7 @@ describe('TaskScheduler', () => {
 
   describe('getTaskScheduler', () => {
     it('is a function', () => {
-      expect(getTaskScheduler).to.be.an.instanceof(Function);
+      expect(getTaskScheduler).toBeInstanceOf(Function);
     });
 
     it('returns a task scheduler', done => {
@@ -30,7 +30,7 @@ describe('TaskScheduler', () => {
 
   describe('setTaskScheduler', () => {
     it('is a function', () => {
-      expect(setTaskScheduler).to.be.an.instanceof(Function);
+      expect(setTaskScheduler).toBeInstanceOf(Function);
     });
 
     it('allows setting the task scheduler', () => {
@@ -44,17 +44,17 @@ describe('TaskScheduler', () => {
 
       const task = sinon.spy();
       scheduleTask(task);
-      expect(newScheduler).to.have.been.calledOnce;
-      expect(newScheduler).to.have.been.calledWith(task);
+      expect(newScheduler).toHaveBeenCalledTimes(1);
+      expect(newScheduler).toHaveBeenCalledWith(task);
 
       setTaskScheduler(scheduler);
     });
   });
 
   describe('a task scheduler when setImmediate exists', () => {
-    const backups = {};
+    const backups: any = {};
 
-    before(() => {
+    beforeEach(() => {
       backups.setTimeout = global.setTimeout;
       backups.queueMicrotask = global.queueMicrotask;
       backups.setImmediate = global.setImmediate;
@@ -63,7 +63,7 @@ describe('TaskScheduler', () => {
       global.queueMicrotask = sinon.spy();
     });
 
-    after(() => {
+    afterEach(() => {
       global.setTimeout = backups.setTimeout;
       global.queueMicrotask = backups.queueMicrotask;
       global.setImmediate = backups.setImmediate;
@@ -77,16 +77,16 @@ describe('TaskScheduler', () => {
         taskScheduler(task);
       expect(global.setImmediate).to.have.callCount(1);
       expect(global.queueMicrotask).to.have.callCount(99);
-      expect(global.setImmediate).to.have.been.calledWith(task);
-      expect(global.queueMicrotask).to.have.been.calledWith(task);
+      expect(global.setImmediate).toHaveBeenCalledWith(task);
+      expect(global.queueMicrotask).toHaveBeenCalledWith(task);
       expect(global.setTimeout).to.have.callCount(0);
     });
   });
 
   describe('a task scheduler when setImmediate does not exist', () => {
-    const backups = {};
+    const backups: any = {};
 
-    before(() => {
+    beforeEach(() => {
       backups.setTimeout = global.setTimeout;
       backups.queueMicrotask = global.queueMicrotask;
       backups.setImmediate = global.setImmediate;
@@ -95,7 +95,7 @@ describe('TaskScheduler', () => {
       global.queueMicrotask = sinon.spy();
     });
 
-    after(() => {
+    afterEach(() => {
       global.setTimeout = backups.setTimeout;
       global.queueMicrotask = backups.queueMicrotask;
       global.setImmediate = backups.setImmediate;
@@ -109,20 +109,20 @@ describe('TaskScheduler', () => {
         taskScheduler(task);
       expect(global.setTimeout).to.have.callCount(1);
       expect(global.queueMicrotask).to.have.callCount(99);
-      expect(global.setTimeout).to.have.been.calledWith(task, 0);
-      expect(global.queueMicrotask).to.have.been.calledWith(task);
+      expect(global.setTimeout).toHaveBeenCalledWith(task, 0);
+      expect(global.queueMicrotask).toHaveBeenCalledWith(task);
     });
   });
 
   describe('a task scheduler when queueMicrotask is unavailable', () => {
-    const backups = {};
+    const backups: Partial<typeof global> = {};
 
-    before(() => {
+    beforeEach(() => {
       backups.queueMicrotask = global.queueMicrotask;
       delete global.queueMicrotask;
     });
 
-    after(() => {
+    afterEach(() => {
       global.queueMicrotask = backups.queueMicrotask;
     });
 

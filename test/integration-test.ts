@@ -2,13 +2,17 @@ import {
   ArrayIterator,
   TransformIterator,
   UnionIterator,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
+
+import type { ClonedIterator } from '../asynciterator';
 
 describe('Integration tests', () => {
   describe('A sequence of ArrayIterator, TransformIterator, and Unioniterator without autoStart', () => {
-    let arrayIterator, transformIterator, unionIterator;
+    let arrayIterator: ArrayIterator<number>;
+    let transformIterator: TransformIterator<number, number>;
+    let unionIterator: UnionIterator<number>;
 
-    before(() => {
+    beforeEach(() => {
       arrayIterator = new ArrayIterator([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], { autoStart: false });
       transformIterator = new TransformIterator(arrayIterator, { autoStart: false });
       unionIterator = new UnionIterator([transformIterator], { autoStart: false });
@@ -26,9 +30,9 @@ describe('Integration tests', () => {
 
   describe('Cloning iterators', () => {
     describe('A clone of an empty ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<never>, clonedIterator: ClonedIterator<never>;
 
-      before(() => {
+      beforeEach(() => {
         arrayIterator = new ArrayIterator([], { autoStart: false });
         clonedIterator = arrayIterator.clone();
       });
@@ -40,9 +44,9 @@ describe('Integration tests', () => {
     });
 
     describe('An async clone of an empty ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<never>, clonedIterator: ClonedIterator<never>;
 
-      before(async () => {
+      beforeEach(async () => {
         arrayIterator = new ArrayIterator([], { autoStart: false });
 
         // Wait a tick
@@ -58,9 +62,9 @@ describe('Integration tests', () => {
     });
 
     describe('A multi-clone of an empty ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator1, clonedIterator2;
+      let arrayIterator: ArrayIterator<never>, clonedIterator1: ClonedIterator<never>, clonedIterator2: ClonedIterator<never>;
 
-      before(() => {
+      beforeEach(() => {
         arrayIterator = new ArrayIterator([], { autoStart: false });
         clonedIterator1 = arrayIterator.clone();
         clonedIterator2 = arrayIterator.clone();
@@ -78,9 +82,9 @@ describe('Integration tests', () => {
     });
 
     describe('An async multi-clone of an empty ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator1, clonedIterator2;
+      let arrayIterator: ArrayIterator<never>, clonedIterator1: ClonedIterator<never>, clonedIterator2: ClonedIterator<never>;
 
-      before(async () => {
+      beforeEach(async () => {
         arrayIterator = new ArrayIterator([], { autoStart: false });
 
         // Wait a tick
@@ -102,9 +106,9 @@ describe('Integration tests', () => {
     });
 
     describe('A double clone of an empty ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<never>, clonedIterator: ClonedIterator<never>;
 
-      before(() => {
+      beforeEach(() => {
         arrayIterator = new ArrayIterator([], { autoStart: false });
         clonedIterator = arrayIterator.clone().clone();
       });
@@ -116,9 +120,9 @@ describe('Integration tests', () => {
     });
 
     describe('A clone of a sequence of an empty ArrayIterator, and TransformIterator without autoStart', () => {
-      let arrayIterator, transformIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<never>, transformIterator: TransformIterator<never>, clonedIterator: ClonedIterator<never>;
 
-      before(() => {
+      beforeEach(() => {
         arrayIterator = new ArrayIterator([], { autoStart: false });
         transformIterator = new TransformIterator(arrayIterator, { autoStart: false });
         clonedIterator = transformIterator.clone();
@@ -131,9 +135,9 @@ describe('Integration tests', () => {
     });
 
     describe('A clone of a sequence of an empty ArrayIterator, TransformIterator, and Unioniterator without autoStart', () => {
-      let arrayIterator, transformIterator, unionIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<never>, transformIterator: TransformIterator<never>, unionIterator: UnionIterator<never>, clonedIterator: ClonedIterator<never>;
 
-      before(() => {
+      beforeEach(() => {
         arrayIterator = new ArrayIterator([], { autoStart: false });
         transformIterator = new TransformIterator(arrayIterator, { autoStart: false });
         unionIterator = new UnionIterator([transformIterator], { autoStart: false });
@@ -147,9 +151,9 @@ describe('Integration tests', () => {
     });
 
     describe('A clone of an ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<number>, clonedIterator: ClonedIterator<number>;
 
-      before(() => {
+      beforeEach(() => {
         arrayIterator = new ArrayIterator([1, 2, 3], { autoStart: false });
         clonedIterator = arrayIterator.clone();
       });
@@ -161,9 +165,9 @@ describe('Integration tests', () => {
     });
 
     describe('An async clone of an ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<number>, clonedIterator: ClonedIterator<number>;
 
-      before(async () => {
+      beforeEach(async () => {
         arrayIterator = new ArrayIterator([1, 2, 3], { autoStart: false });
 
         // Wait a tick
@@ -179,9 +183,9 @@ describe('Integration tests', () => {
     });
 
     describe('A double clone of an ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<number>, clonedIterator: ClonedIterator<number>;
 
-      before(() => {
+      beforeEach(() => {
         arrayIterator = new ArrayIterator([1, 2, 3], { autoStart: false });
         clonedIterator = arrayIterator.clone().clone();
       });
@@ -193,9 +197,9 @@ describe('Integration tests', () => {
     });
 
     describe('A double async clone of an ArrayIterator without autoStart', () => {
-      let arrayIterator, clonedIterator;
+      let arrayIterator: ArrayIterator<number>, clonedIterator: ClonedIterator<number>;
 
-      before(async () => {
+      beforeEach(async () => {
         arrayIterator = new ArrayIterator([1, 2, 3], { autoStart: false });
         clonedIterator = arrayIterator.clone();
 

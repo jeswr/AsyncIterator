@@ -6,47 +6,47 @@ import {
   TransformIterator,
   wrap,
   scheduleTask,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
 
 describe('TransformIterator', () => {
   describe('The TransformIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new TransformIterator(); });
+      let instance: TransformIterator<never, never>;
+      beforeEach(() => { instance = new TransformIterator(); });
 
       it('should be a TransformIterator object', () => {
-        instance.should.be.an.instanceof(TransformIterator);
+        expect(instance).toBeInstanceOf(TransformIterator);
       });
 
       it('should be a BufferedIterator object', () => {
-        instance.should.be.an.instanceof(BufferedIterator);
+        expect(instance).toBeInstanceOf(BufferedIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
 
     describe('the result when called through `wrap`', () => {
-      let instance;
-      before(() => { instance = wrap(); });
+      let instance: TransformIterator<unknown, unknown>;
+      beforeEach(() => { instance = wrap(new EventEmitter()); });
 
       it('should be an TransformIterator object', () => {
-        instance.should.be.an.instanceof(TransformIterator);
+        expect(instance).toBeInstanceOf(TransformIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
@@ -54,100 +54,101 @@ describe('TransformIterator', () => {
   describe('A TransformIterator', () => {
     it('disallows setting a falsy object as source', () => {
       const iterator = new TransformIterator();
-      (() => { iterator.source = null; })
-        .should.throw('Invalid source: null');
+      // @ts-expect-error
+      expect(() => { iterator.source = null; }).toThrowError('Invalid source: null');
     });
 
     it('disallows setting an object without `read` function as source', () => {
       const iterator = new TransformIterator();
-      (() => { iterator.source = { read: 1, on() { /* */ } }; })
-        .should.throw('Invalid source: [object Object]');
+      // @ts-expect-error
+      expect(() => { iterator.source = { read: 1, on() { /* */ } }; })
+        .toThrowError('Invalid source: [object Object]');
     });
 
     it('disallows setting an object without `on` function as source', () => {
       const iterator = new TransformIterator();
-      (() => { iterator.source = { on: 1, read() { /* */ } }; })
-        .should.throw('Invalid source: [object Object]');
+      // @ts-expect-error
+      expect(() => { iterator.source = { on: 1, read() { /* */ } }; })
+        .toThrowError('Invalid source: [object Object]');
     });
 
     it('disallows setting another source after one has been set', () => {
       const iterator = new TransformIterator();
       iterator.source = new EmptyIterator();
-      (() => { iterator.source = new EmptyIterator(); })
-        .should.throw('The source cannot be changed after it has been set');
+      expect(() => { iterator.source = new EmptyIterator(); })
+        .toThrowError('The source cannot be changed after it has been set');
     });
 
     it('allows setting the source through the first argument', () => {
       const source = new EmptyIterator(),
             iterator = new TransformIterator(source);
-      iterator.source.should.equal(source);
+      expect(iterator.source).toEqual(source);
     });
 
     it('allows setting the source through an options hash as first argument', () => {
       const source = new EmptyIterator(),
             iterator = new TransformIterator({ source });
-      iterator.source.should.equal(source);
+      expect(iterator.source).toEqual(source);
     });
 
     it('allows setting the source through an options hash as second argument', () => {
       const source = new EmptyIterator(),
             iterator = new TransformIterator(null, { source });
-      iterator.source.should.equal(source);
+      expect(iterator.source).toEqual(source);
     });
 
     it('gives precedence to a source as first argument', () => {
       const sourceA = new EmptyIterator(),
             sourceB = new EmptyIterator(),
             iterator = new TransformIterator(sourceA, { source: sourceB });
-      iterator.source.should.equal(sourceA);
+      expect(iterator.source).toEqual(sourceA);
     });
 
     it('does not allow setting a source that already has a destination', () => {
       const source = new EmptyIterator(),
             iteratorA = new TransformIterator(),
             iteratorB = new TransformIterator();
-      (() => { iteratorA.source = source; })
-        .should.not.throw();
-      (() => { iteratorB.source = source; })
-        .should.throw('The source already has a destination');
+      expect(() => { iteratorA.source = source; }).not.toThrowError();
+      expect(() => { iteratorB.source = source; })
+        .toThrowError('The source already has a destination');
     });
   });
 
   describe('A TransformIterator without source', () => {
     let iterator;
-    before(() => {
+    beforeEach(() => {
       iterator = new TransformIterator();
       captureEvents(iterator, 'readable', 'end');
     });
 
-    describe('before closing', () => {
+    describe('beforeEach closing', () => {
       it('should have undefined as `source` property', () => {
         expect(iterator.source).to.be.undefined;
       });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after closing', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.close();
       });
 
@@ -156,30 +157,30 @@ describe('TransformIterator', () => {
       });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A TransformIterator initialized with an empty source', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       iterator = new TransformIterator(source = new EmptyIterator());
       captureEvents(iterator, 'readable', 'end');
       expect(source._events).to.not.contain.key('data');
@@ -188,111 +189,111 @@ describe('TransformIterator', () => {
     });
 
     it('should expose the source in the `source` property', () => {
-      iterator.source.should.equal(source);
+      iterator.source.toEqual(source);
     });
 
     it('should not have emitted the `readable` event', () => {
-      iterator._eventCounts.readable.should.equal(0);
+      expect((iterator as any)._eventCounts.readable).toEqual(0);
     });
 
     it('should have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(1);
+      expect((iterator as any)._eventCounts.end).toEqual(1);
     });
 
     it('should have ended', () => {
-      iterator.ended.should.be.true;
+      expect(iterator.ended).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when read is called', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
   });
 
   describe('A TransformIterator initialized with a source that ends asynchronously', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       iterator = new TransformIterator(source = new AsyncIterator());
       captureEvents(iterator, 'readable', 'end');
     });
 
-    describe('before the source ends', () => {
+    describe('beforeEach the source ends', () => {
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when read is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('when the source emits a `readable` event (but does not actually contain items)', () => {
-      before(() => { source.emit('readable'); });
+      beforeEach(() => { source.emit('readable'); });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when read is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
 
     describe('after the source ends', () => {
-      before(() => { source.close(); });
+      beforeEach(() => { source.close(); });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when read is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A TransformIterator with a one-item source', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       iterator = new TransformIterator(source = new ArrayIterator(['a']));
       captureEvents(iterator, 'readable', 'end');
       sinon.spy(source, 'read');
@@ -300,62 +301,62 @@ describe('TransformIterator', () => {
       source._terminate = function () { this._changeState(AsyncIterator.ENDED); };
     });
 
-    describe('before reading an item', () => {
+    describe('beforeEach reading an item', () => {
       it('should have called `read` on the source', () => {
         source.read.should.have.been.calledOnce;
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading an item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the original item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not leave `readable` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'readable').should.equal(0);
+        EventEmitter.listenerCount(source, 'readable').toEqual(0);
       });
 
       it('should not leave `end` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'end').should.equal(0);
+        EventEmitter.listenerCount(source, 'end').toEqual(0);
       });
 
       it('should remove itself as destination from the source', () => {
@@ -366,9 +367,9 @@ describe('TransformIterator', () => {
 
   describe('A TransformIterator that synchronously transforms a two-item source', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       iterator = new TransformIterator(source = new ArrayIterator(['a', 'b', 'c']));
-      iterator._transform = function (item, done) {
+      (iterator as any)._transform = function (item, done) {
         this._push(`${item}1`);
         this._push(`${item}2`);
         done();
@@ -379,90 +380,90 @@ describe('TransformIterator', () => {
       source._terminate = function () { this._changeState(AsyncIterator.ENDED); };
     });
 
-    describe('before reading an item', () => {
+    describe('beforeEach reading an item', () => {
       it('should have called `read` on the source', () => {
         source.read.should.have.been.called;
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading one item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the transformed item', () => {
-        item.should.equal('a1');
+        expect(item).toEqual('a1');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the remaining items', () => {
       const items = [];
-      before(() => {
+      beforeEach(() => {
         for (let i = 0; i < 5; i++)
           items.push(iterator.read());
       });
 
       it('should have read the transformed items', () => {
-        items.should.deep.equal(['a2', 'b1', 'b2', 'c1', 'c2']);
+        items.toEqual(['a2', 'b1', 'b2', 'c1', 'c2']);
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not leave `readable` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'readable').should.equal(0);
+        EventEmitter.listenerCount(source, 'readable').toEqual(0);
       });
 
       it('should not leave `end` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'end').should.equal(0);
+        EventEmitter.listenerCount(source, 'end').toEqual(0);
       });
 
       it('should remove itself as destination from the source', () => {
@@ -473,12 +474,12 @@ describe('TransformIterator', () => {
 
   describe('A TransformIterator that asynchronously transforms a two-item source', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       iterator = new TransformIterator(source = new ArrayIterator(['a', 'b', 'c']));
-      iterator._transform = function (item, done) {
+      (iterator as any)._transform = function (item, done) {
         scheduleTask(() => {
-          iterator._push(`${item}1`);
-          iterator._push(`${item}2`);
+          (iterator as any)._push(`${item}1`);
+          (iterator as any)._push(`${item}2`);
           done();
         });
       };
@@ -488,90 +489,90 @@ describe('TransformIterator', () => {
       source._terminate = function () { this._changeState(AsyncIterator.ENDED); };
     });
 
-    describe('before reading an item', () => {
+    describe('beforeEach reading an item', () => {
       it('should have called `read` on the source', () => {
         source.read.should.have.been.called;
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading one item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the transformed item', () => {
-        item.should.equal('a1');
+        expect(item).toEqual('a1');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading the remaining items', () => {
       const items = [];
-      before(() => {
+      beforeEach(() => {
         for (let i = 0; i < 5; i++)
           items.push(iterator.read());
       });
 
       it('should have read the transformed items', () => {
-        items.should.deep.equal(['a2', 'b1', 'b2', 'c1', 'c2']);
+        items.toEqual(['a2', 'b1', 'b2', 'c1', 'c2']);
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should not leave `readable` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'readable').should.equal(0);
+        EventEmitter.listenerCount(source, 'readable').toEqual(0);
       });
 
       it('should not leave `end` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'end').should.equal(0);
+        EventEmitter.listenerCount(source, 'end').toEqual(0);
       });
 
       it('should remove itself as destination from the source', () => {
@@ -582,11 +583,11 @@ describe('TransformIterator', () => {
 
   describe('A TransformIterator that synchronously transforms a three-item source but asynchronously completes', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       let i = 0;
       source = new ArrayIterator(['a', 'b', 'c']);
       iterator = new TransformIterator(source);
-      iterator._transform = sinon.spy(function (item, done) {
+      (iterator as any)._transform = sinon.spy(function (item, done) {
         this._push(item + (++i));
         scheduleTask(done);
       });
@@ -594,28 +595,28 @@ describe('TransformIterator', () => {
 
     describe('when reading items', () => {
       const items = [];
-      before(done => {
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should execute the transform function on all items in order', () => {
-        items.should.deep.equal(['a1', 'b2', 'c3']);
+        items.toEqual(['a1', 'b2', 'c3']);
       });
 
       it('should have called _transform once for each item', () => {
-        iterator._transform.should.have.been.calledThrice;
+        (iterator as any)._transform.should.have.been.calledThrice;
       });
 
       it('should have called _transform function with the iterator as `this`', () => {
-        iterator._transform.alwaysCalledOn(iterator).should.be.true;
+        (iterator as any)._transform.alwaysCalledOn(iterator).toBe(true);
       });
     });
   });
 
   describe('A TransformIterator with a promise to a source', () => {
     let iterator, source, sourcePromise, resolvePromise;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a']);
       sourcePromise = new Promise(resolve => {
         resolvePromise = resolve;
@@ -626,85 +627,85 @@ describe('TransformIterator', () => {
       captureEvents(iterator, 'readable', 'end');
     });
 
-    describe('before the promise resolves', () => {
+    describe('beforeEach the promise resolves', () => {
       it('should have called `then` on the promise', () => {
         sourcePromise.then.should.have.been.calledOnce;
       });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
     });
 
     describe('after the promise resolves', () => {
-      before(() => resolvePromise(source));
+      beforeEach(() => resolvePromise(source));
 
       it('should have called `read` on the source', () => {
         source.read.should.have.been.calledOnce;
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading an item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the original item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A TransformIterator with a promise and without autoStart', () => {
     let iterator, source, sourcePromise, resolvePromise;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a']);
       sourcePromise = new Promise(resolve => {
         resolvePromise = resolve;
@@ -715,7 +716,7 @@ describe('TransformIterator', () => {
       captureEvents(iterator, 'readable', 'end');
     });
 
-    describe('before the promise resolves', () => {
+    describe('beforeEach the promise resolves', () => {
       it('does not allow setting another source', () => {
         (() => { iterator.source = {}; })
           .should.throw('The source cannot be changed after it has been set');
@@ -726,28 +727,28 @@ describe('TransformIterator', () => {
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after calling read', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should not have returned an item', () => {
-        expect(item).to.be.null;
+        expect(item).toBe(null);
       });
 
       it('should have called `then` on the promise', () => {
@@ -755,79 +756,79 @@ describe('TransformIterator', () => {
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
     });
 
     describe('after the promise resolves', () => {
-      before(() => resolvePromise(source));
+      beforeEach(() => resolvePromise(source));
 
       it('should have called `read` on the source', () => {
         source.read.should.have.been.calledOnce;
       });
 
       it('should have emitted another `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(2);
+        expect((iterator as any)._eventCounts.readable).toEqual(2);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading an item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the original item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(2);
+        expect((iterator as any)._eventCounts.readable).toEqual(2);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A TransformIterator with a promise that is rejected', () => {
     let iterator, error, errorHandler;
-    before(() => {
+    beforeEach(() => {
       error = new Error('source creation error');
       const rejected = Promise.resolve().then(() => { throw error; });
       iterator = new TransformIterator(rejected);
@@ -842,7 +843,7 @@ describe('TransformIterator', () => {
 
   describe('A TransformIterator with a promise that resolves after closing', () => {
     let iterator, source, sourcePromise, resolvePromise;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a']);
       sourcePromise = new Promise(resolve => {
         resolvePromise = resolve;
@@ -854,7 +855,7 @@ describe('TransformIterator', () => {
     });
 
     describe('after closing and resolving', () => {
-      before(() => {
+      beforeEach(() => {
         iterator.close();
         resolvePromise(source);
       });
@@ -865,7 +866,7 @@ describe('TransformIterator', () => {
     });
 
     describe('after calling read', () => {
-      before(() => { iterator.read(); });
+      beforeEach(() => { iterator.read(); });
 
       it('should not have called read on the source', () => {
         source.read.should.not.have.been.called;
@@ -875,7 +876,7 @@ describe('TransformIterator', () => {
 
   describe('A TransformIterator with a source creation function', () => {
     let iterator, source, createSource;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a']);
       sinon.spy(source, 'read');
       createSource = sinon.spy(() => source);
@@ -893,19 +894,19 @@ describe('TransformIterator', () => {
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('does not allow setting another source', () => {
@@ -916,37 +917,37 @@ describe('TransformIterator', () => {
 
     describe('after reading an item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the original item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A TransformIterator with a source creation function returning a promise', () => {
     let iterator, source, createSource, sourcePromise, resolvePromise;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a']);
       sinon.spy(source, 'read');
       sourcePromise = new Promise(resolve => {
@@ -957,25 +958,25 @@ describe('TransformIterator', () => {
       captureEvents(iterator, 'readable', 'end');
     });
 
-    describe('before the source is created', () => {
+    describe('beforeEach the source is created', () => {
       it('should have called the creation function', () => {
         createSource.should.have.been.calledOnce;
       });
 
       it('should not have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(0);
+        expect((iterator as any)._eventCounts.readable).toEqual(0);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('does not allow setting another source', () => {
@@ -985,62 +986,62 @@ describe('TransformIterator', () => {
     });
 
     describe('after the promise resolves', () => {
-      before(() => resolvePromise(source));
+      beforeEach(() => resolvePromise(source));
 
       it('should have called `read` on the source', () => {
         source.read.should.have.been.calledOnce;
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading an item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the original item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A TransformIterator with a source creation function and without autoStart', () => {
     let iterator, source, createSource, sourcePromise, resolvePromise;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator(['a']);
       sinon.spy(source, 'read');
       sourcePromise = new Promise(resolve => {
@@ -1051,7 +1052,7 @@ describe('TransformIterator', () => {
       captureEvents(iterator, 'readable', 'end');
     });
 
-    describe('before the promise resolves', () => {
+    describe('beforeEach the promise resolves', () => {
       it('does not allow setting another source', () => {
         (() => { iterator.source = {}; })
           .should.throw('The source cannot be changed after it has been set');
@@ -1062,28 +1063,28 @@ describe('TransformIterator', () => {
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after calling read', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should not have returned an item', () => {
-        expect(item).to.be.null;
+        expect(item).toBe(null);
       });
 
       it('should have called the function', () => {
@@ -1091,85 +1092,85 @@ describe('TransformIterator', () => {
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
     });
 
     describe('after the promise resolves', () => {
-      before(() => resolvePromise(source));
+      beforeEach(() => resolvePromise(source));
 
       it('should have called `read` on the source', () => {
         source.read.should.have.been.calledOnce;
       });
 
       it('should have emitted another `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(2);
+        expect((iterator as any)._eventCounts.readable).toEqual(2);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after reading an item', () => {
       let item;
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should have read the original item', () => {
-        item.should.equal('a');
+        expect(item).toEqual('a');
       });
 
       it('should not have emitted the `readable` event anymore', () => {
-        iterator._eventCounts.readable.should.equal(2);
+        expect((iterator as any)._eventCounts.readable).toEqual(2);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should return null when `read` is called', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
     });
   });
 
   describe('A TransformIterator with destroySource set to its default', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3]);
       iterator = new TransformIterator(source, { autoStart: false });
     });
 
     describe('after being closed', () => {
-      before(done => {
+      beforeEach(done => {
         iterator.read();
         iterator.close();
         iterator.on('end', done);
@@ -1183,13 +1184,13 @@ describe('TransformIterator', () => {
 
   describe('A TransformIterator with destroySource set to false', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3]);
       iterator = new TransformIterator(source, { autoStart: false, destroySource: false });
     });
 
     describe('after being closed', () => {
-      before(done => {
+      beforeEach(done => {
         iterator.read();
         iterator.close();
         iterator.on('end', done);
@@ -1203,13 +1204,13 @@ describe('TransformIterator', () => {
 
   describe('A TransformIterator with a source that errors', () => {
     let iterator, source, errorHandler;
-    before(() => {
+    beforeEach(() => {
       source = new AsyncIterator();
       iterator = new TransformIterator(source);
       iterator.on('error', errorHandler = sinon.stub());
     });
 
-    describe('before an error occurs', () => {
+    describe('beforeEach an error occurs', () => {
       it('should not have emitted any error', () => {
         errorHandler.should.not.have.been.called;
       });
@@ -1217,7 +1218,7 @@ describe('TransformIterator', () => {
 
     describe('after a first error occurs', () => {
       let error1;
-      before(() => {
+      beforeEach(() => {
         errorHandler.reset();
         source.emit('error', error1 = new Error('error1'));
       });
@@ -1230,7 +1231,7 @@ describe('TransformIterator', () => {
 
     describe('after a second error occurs', () => {
       let error2;
-      before(() => {
+      beforeEach(() => {
         errorHandler.reset();
         source.emit('error', error2 = new Error('error2'));
       });
@@ -1242,7 +1243,7 @@ describe('TransformIterator', () => {
     });
 
     describe('after the source has ended and errors again', () => {
-      before(done => {
+      beforeEach(done => {
         errorHandler.reset();
         source.close();
         iterator.on('end', () => {
@@ -1259,18 +1260,18 @@ describe('TransformIterator', () => {
       });
 
       it('should not leave any error handlers attached', () => {
-        source.listenerCount('error').should.equal(0);
+        source.listenerCount('error').toEqual(0);
       });
     });
   });
 
   describe('A TransformIterator that skips many items', () => {
     let iterator, source, i = 1;
-    before(() => {
+    beforeEach(() => {
       source = new AsyncIterator();
       source.read = sinon.spy(() => i++);
       iterator = new TransformIterator(source);
-      iterator._transform = function (item, done) {
+      (iterator as any)._transform = function (item, done) {
         if (item % 10 === 0)
           this._push(item);
         done();
@@ -1278,36 +1279,36 @@ describe('TransformIterator', () => {
       captureEvents(iterator, 'readable', 'end');
     });
 
-    describe('before reading an item', () => {
+    describe('beforeEach reading an item', () => {
       it('should have called `read` on the source', () => {
         source.read.should.have.been.called;
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after reading a first item', () => {
       let item;
-      before(() => {
+      beforeEach(() => {
         item = iterator.read();
       });
 
       it('should read the correct item', () => {
-        item.should.equal(10);
+        expect(item).toEqual(10);
       });
 
       it('should have called `read` on the source until it had sufficient items', () => {
@@ -1315,26 +1316,26 @@ describe('TransformIterator', () => {
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after reading a second item', () => {
       let item;
-      before(() => {
+      beforeEach(() => {
         item = iterator.read();
       });
 
       it('should read the correct item', () => {
-        item.should.equal(20);
+        expect(item).toEqual(20);
       });
 
       it('should have called `read` on the source until it had sufficient items', () => {
@@ -1342,26 +1343,26 @@ describe('TransformIterator', () => {
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
   });
 
   describe('A TransformIterator that closes during the tranformation', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new AsyncIterator();
       source.read = sinon.spy(() => 1);
       iterator = new TransformIterator(source);
-      iterator._transform = function (item, done) {
+      (iterator as any)._transform = function (item, done) {
         this._push(item);
         this.close();
         done();
@@ -1369,36 +1370,36 @@ describe('TransformIterator', () => {
       captureEvents(iterator, 'readable', 'end');
     });
 
-    describe('before reading an item', () => {
+    describe('beforeEach reading an item', () => {
       it('should have called `read` on the source', () => {
         source.read.should.have.been.called;
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
     });
 
     describe('after reading a first item', () => {
       let item;
-      before(() => {
+      beforeEachEach(() => {
         item = iterator.read();
       });
 
       it('should read the correct item', () => {
-        item.should.equal(1);
+        expect(item).toEqual(1);
       });
 
       it('should have called `read` on the source only once', () => {
@@ -1406,37 +1407,37 @@ describe('TransformIterator', () => {
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not leave `readable` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'readable').should.equal(0);
+        EventEmitter.listenerCount(source, 'readable').toEqual(0);
       });
 
       it('should not leave `end` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'end').should.equal(0);
+        EventEmitter.listenerCount(source, 'end').toEqual(0);
       });
 
       it('should not leave `error` listeners on the source', () => {
-        EventEmitter.listenerCount(source, 'error').should.equal(0);
+        EventEmitter.listenerCount(source, 'error').toEqual(0);
       });
     });
   });
 
   describe('A TransformIterator with optional set to false', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3, 4, 5, 6]);
       iterator = new TransformIterator(source, { optional: false });
-      iterator._transform = function (item, done) {
+      (iterator as any)._transform = function (item, done) {
         if (item % 3 !== 0)
           this._push(`t${item}`);
         done();
@@ -1445,23 +1446,23 @@ describe('TransformIterator', () => {
 
     describe('when reading items', () => {
       const items = [];
-      before(done => {
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return items not transformed into null', () => {
-        items.should.deep.equal(['t1', 't2', 't4', 't5']);
+        items.toEqual(['t1', 't2', 't4', 't5']);
       });
     });
   });
 
   describe('A TransformIterator with optional set to true', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3, 4, 5, 6]);
       iterator = new TransformIterator(source, { optional: true });
-      iterator._transform = function (item, done) {
+      (iterator as any)._transform = function (item, done) {
         if (item % 3 !== 0)
           this._push(`t${item}`);
         done();
@@ -1470,23 +1471,23 @@ describe('TransformIterator', () => {
 
     describe('when reading items', () => {
       const items = [];
-      before(done => {
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items, or if none, the item itself', () => {
-        items.should.deep.equal(['t1', 't2', 3, 't4', 't5', 6]);
+        items.toEqual(['t1', 't2', 3, 't4', 't5', 6]);
       });
     });
   });
 
   describe('A TransformIterator that pushes via the callback', () => {
     let iterator, source;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([1, 2, 3, 4, 5, 6]);
       iterator = new TransformIterator(source);
-      iterator._transform = function (item, done, push) {
+      (iterator as any)._transform = function (item, done, push) {
         push(`t${item}`);
         done();
       };
@@ -1494,20 +1495,20 @@ describe('TransformIterator', () => {
 
     describe('when reading items', () => {
       const items = [];
-      before(done => {
+      beforeEach(done => {
         iterator.on('data', item => { items.push(item); });
         iterator.on('end', done);
       });
 
       it('should return the transformed items', () => {
-        items.should.deep.equal(['t1', 't2', 't3', 't4', 't5', 't6']);
+        items.toEqual(['t1', 't2', 't3', 't4', 't5', 't6']);
       });
     });
   });
 
   describe('Two transformers in sequence with autostart', () => {
     let source, transform1, transform2, callback;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([]);
       transform1 = new TransformIterator(source);
       transform2 = new TransformIterator(transform1);
@@ -1515,7 +1516,7 @@ describe('TransformIterator', () => {
       transform2.on('end', callback);
     });
 
-    describe('before attaching a data listener', () => {
+    describe('beforeEach attaching a data listener', () => {
       it('should have emitted the end event', () => {
         callback.should.have.been.called;
       });
@@ -1524,27 +1525,27 @@ describe('TransformIterator', () => {
 
   describe('Two transformers in sequence without autostart', () => {
     let source, transform1, transform2, callback;
-    before(() => {
+    beforeEach(() => {
       source = new ArrayIterator([]);
       transform1 = new TransformIterator(source, { autoStart: false });
       transform2 = new TransformIterator(transform1, { autoStart: false });
-      callback = sinon.spy();
+      callback = jest.spyOn();
       transform2.on('end', callback);
     });
 
-    describe('before attaching a data listener', () => {
+    describe('beforeEach attaching a data listener', () => {
       it('should not have emitted the end event', () => {
-        callback.should.not.have.been.called;
+        expect(callback).not.toHaveBeenCalled();
       });
     });
 
     describe('after attaching a data listener', () => {
-      before(() => {
+      beforeEach(() => {
         transform2.on('data', sinon.spy());
       });
 
       it('should have emitted the end event', () => {
-        callback.should.have.been.called;
+        expect(callback).toHaveBeenCalled();
       });
     });
   });

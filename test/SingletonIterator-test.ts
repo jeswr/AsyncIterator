@@ -2,133 +2,134 @@ import {
   AsyncIterator,
   SingletonIterator,
   single,
-} from '../dist/asynciterator.js';
+} from '../asynciterator';
 
 import { EventEmitter } from 'events';
+import { expect } from 'chai';
 
 describe('SingletonIterator', () => {
   describe('The SingletonIterator function', () => {
     describe('the result when called with `new`', () => {
-      let instance;
-      before(() => { instance = new SingletonIterator(); });
+      let instance: SingletonIterator<null>;
+      beforeEach(() => { instance = new SingletonIterator(null); });
 
       it('should be a SingletonIterator object', () => {
-        instance.should.be.an.instanceof(SingletonIterator);
+        expect(instance).toBeInstanceOf(SingletonIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
 
     describe('the result when called through `single`', () => {
-      let instance;
-      before(() => { instance = single(); });
+      let instance: SingletonIterator<never>;
+      beforeEach(() => { instance = single(); });
 
       it('should be a SingletonIterator object', () => {
-        instance.should.be.an.instanceof(SingletonIterator);
+        expect(instance).toBeInstanceOf(SingletonIterator);
       });
 
       it('should be an AsyncIterator object', () => {
-        instance.should.be.an.instanceof(AsyncIterator);
+        expect(instance).toBeInstanceOf(AsyncIterator);
       });
 
       it('should be an EventEmitter object', () => {
-        instance.should.be.an.instanceof(EventEmitter);
+        expect(instance).toBeInstanceOf(EventEmitter);
       });
     });
   });
 
   describe('An SingletonIterator without item', () => {
-    let iterator;
-    before(() => {
+    let iterator: SingletonIterator<null>;
+    beforeEach(() => {
       iterator = new SingletonIterator(null);
       captureEvents(iterator, 'readable', 'end');
     });
 
     it('should provide a readable `toString` representation', () => {
-      iterator.toString().should.equal('[SingletonIterator]');
+      expect(iterator.toString()).toEqual('[SingletonIterator]');
     });
 
     it('should not have emitted the `readable` event', () => {
-      iterator._eventCounts.readable.should.equal(0);
+      expect((iterator as any)._eventCounts.readable).toEqual(0);
     });
 
     it('should have emitted the `end` event', () => {
-      iterator._eventCounts.end.should.equal(1);
+      expect((iterator as any)._eventCounts.end).toEqual(1);
     });
 
     it('should have ended', () => {
-      iterator.ended.should.be.true;
+      expect(iterator.ended).toBe(true);
     });
 
     it('should not be readable', () => {
-      iterator.readable.should.be.false;
+      expect(iterator.readable).toBe(false);
     });
 
     it('should return null when read is called', () => {
-      expect(iterator.read()).to.be.null;
+      expect(iterator.read()).toBe(null);
     });
   });
 
   describe('An SingletonIterator with an item', () => {
-    let iterator, item;
-    before(() => {
+    let iterator: SingletonIterator<number>, item: number | null;
+    beforeEach(() => {
       iterator = new SingletonIterator(1);
       captureEvents(iterator, 'readable', 'end');
     });
 
     describe('before calling read', () => {
       it('should provide a readable `toString` representation', () => {
-        iterator.toString().should.equal('[SingletonIterator (1)]');
+        expect(iterator.toString()).toEqual('[SingletonIterator (1)]');
       });
 
       it('should have emitted the `readable` event', () => {
-        iterator._eventCounts.readable.should.equal(1);
+        expect((iterator as any)._eventCounts.readable).toEqual(1);
       });
 
       it('should not have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(0);
+        expect((iterator as any)._eventCounts.end).toEqual(0);
       });
 
       it('should not have ended', () => {
-        iterator.ended.should.be.false;
+        expect(iterator.ended).toBe(false);
       });
 
       it('should be readable', () => {
-        iterator.readable.should.be.true;
+        expect(iterator.readable).toBe(true);
       });
     });
 
     describe('after calling read for the first time', () => {
-      before(() => { item = iterator.read(); });
+      beforeEach(() => { item = iterator.read(); });
 
       it('should provide a readable `toString` representation', () => {
-        iterator.toString().should.equal('[SingletonIterator]');
+        expect(iterator.toString()).toEqual('[SingletonIterator]');
       });
 
       it('should read the first item of the array', () => {
-        item.should.equal(1);
+        expect(item).toEqual(1);
       });
 
       it('should return null when read is called again', () => {
-        expect(iterator.read()).to.be.null;
+        expect(iterator.read()).toBe(null);
       });
 
       it('should have emitted the `end` event', () => {
-        iterator._eventCounts.end.should.equal(1);
+        expect((iterator as any)._eventCounts.end).toEqual(1);
       });
 
       it('should have ended', () => {
-        iterator.ended.should.be.true;
+        expect(iterator.ended).toBe(true);
       });
 
       it('should not be readable', () => {
-        iterator.readable.should.be.false;
+        expect(iterator.readable).toBe(false);
       });
     });
   });
