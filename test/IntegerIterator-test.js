@@ -437,4 +437,42 @@ describe('IntegerIterator', () => {
       });
     });
   });
+
+  describe('An iterator with no elements should not emit until read from (range constructor)', () => {
+    it('no awaiting', async () => {
+      const iterator = range(0, 0);
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined', async () => {
+      const iterator = range(0, 0);
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting promise', async () => {
+      const iterator = range(0, 0);
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+  });
+
+  describe('An iterator with no elements should not emit until read from', () => {
+    it('no awaiting', async () => {
+      const iterator = new IntegerIterator({ min : 0, max : 0, step: 1 });
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined', async () => {
+      const iterator = new IntegerIterator({ min : 0, max : 0, step: 1 });
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting promise', async () => {
+      const iterator = new IntegerIterator({ min : 0, max : 0, step: 1 });
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+  });
 });
