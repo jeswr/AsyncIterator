@@ -3,6 +3,7 @@ import {
   EmptyIterator,
   empty,
 } from '../dist/asynciterator.js';
+import { promisifyEventEmitter } from './promisify-event-emitter.js'
 
 import { EventEmitter } from 'events';
 
@@ -72,6 +73,25 @@ describe('EmptyIterator', () => {
 
     it('should return null when read is called', () => {
       expect(iterator.read()).to.be.null;
+    });
+  });
+
+  describe('An EmptyIterator should not emit until read from', () => {
+    it('no awaiting', async () => {
+      const iterator = new EmptyIterator();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined', async () => {
+      const iterator = new EmptyIterator();
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+    
+    it('awaiting promise', async () => {
+      const iterator = new EmptyIterator();
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
     });
   });
 });
