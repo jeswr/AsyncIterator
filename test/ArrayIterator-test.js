@@ -3,7 +3,7 @@ import {
   ArrayIterator,
   fromArray,
 } from '../dist/asynciterator.js';
-import { promisifyEventEmitter } from './promisify-event-emitter.js'
+import { promisifyEventEmitter } from './promisify-event-emitter.js';
 
 import { EventEmitter } from 'events';
 
@@ -692,7 +692,7 @@ describe('ArrayIterator', () => {
       await undefined;
       expect(await promisifyEventEmitter(iterator)).to.be.undefined;
     });
-    
+
     it('awaiting promise', async () => {
       const iterator = new ArrayIterator();
       await Promise.resolve();
@@ -704,7 +704,7 @@ describe('ArrayIterator', () => {
       await undefined;
       expect(await promisifyEventEmitter(iterator)).to.be.undefined;
     });
-    
+
     it('awaiting promise (with empty array)', async () => {
       const iterator = new ArrayIterator([]);
       await Promise.resolve();
@@ -716,7 +716,7 @@ describe('ArrayIterator', () => {
       await undefined;
       expect(await promisifyEventEmitter(iterator)).to.be.undefined;
     });
-    
+
     it('awaiting promise (with one element)', async () => {
       const iterator = new ArrayIterator([1]);
       await Promise.resolve();
@@ -735,7 +735,7 @@ describe('ArrayIterator', () => {
       await undefined;
       expect(await promisifyEventEmitter(iterator)).to.be.undefined;
     });
-    
+
     it('awaiting promise', async () => {
       const iterator = fromArray();
       await Promise.resolve();
@@ -747,7 +747,7 @@ describe('ArrayIterator', () => {
       await undefined;
       expect(await promisifyEventEmitter(iterator)).to.be.undefined;
     });
-    
+
     it('awaiting promise (with empty array)', async () => {
       const iterator = fromArray([]);
       await Promise.resolve();
@@ -759,7 +759,7 @@ describe('ArrayIterator', () => {
       await undefined;
       expect(await promisifyEventEmitter(iterator)).to.be.undefined;
     });
-    
+
     it('awaiting promise (with one element)', async () => {
       const iterator = fromArray([1]);
       await Promise.resolve();

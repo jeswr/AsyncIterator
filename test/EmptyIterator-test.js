@@ -3,7 +3,7 @@ import {
   EmptyIterator,
   empty,
 } from '../dist/asynciterator.js';
-import { promisifyEventEmitter } from './promisify-event-emitter.js'
+import { promisifyEventEmitter } from './promisify-event-emitter.js';
 
 import { EventEmitter } from 'events';
 
@@ -87,7 +87,7 @@ describe('EmptyIterator', () => {
       await undefined;
       expect(await promisifyEventEmitter(iterator)).to.be.undefined;
     });
-    
+
     it('awaiting promise', async () => {
       const iterator = new EmptyIterator();
       await Promise.resolve();
