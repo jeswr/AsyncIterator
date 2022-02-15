@@ -679,4 +679,100 @@ describe('ArrayIterator', () => {
       expect(iterator.read()).to.be.null;
     });
   });
+
+
+  describe('An iterator with no elements should not emit until read from', () => {
+    it('no awaiting', async () => {
+      const iterator = new ArrayIterator();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined', async () => {
+      const iterator = new ArrayIterator();
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting promise', async () => {
+      const iterator = new ArrayIterator();
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined (with empty array)', async () => {
+      const iterator = new ArrayIterator([]);
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting promise (with empty array)', async () => {
+      const iterator = new ArrayIterator([]);
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined (with one element)', async () => {
+      const iterator = new ArrayIterator([1]);
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting promise (with one element)', async () => {
+      const iterator = new ArrayIterator([1]);
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+  });
+
+  describe('An iterator with no elements should not emit until read from (fromArray constructor)', () => {
+    it('no awaiting', async () => {
+      const iterator = fromArray();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined', async () => {
+      const iterator = fromArray();
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting promise', async () => {
+      const iterator = fromArray();
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined (with empty array)', async () => {
+      const iterator = fromArray([]);
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting promise (with empty array)', async () => {
+      const iterator = fromArray([]);
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting undefined (with one element)', async () => {
+      const iterator = fromArray([1]);
+      await undefined;
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+
+    it('awaiting promise (with one element)', async () => {
+      const iterator = fromArray([1]);
+      await Promise.resolve();
+      expect(await promisifyEventEmitter(iterator)).to.be.undefined;
+    });
+  });
 });
+
+export async function promisifyEventEmitter(eventEmitter) {
+  return new Promise((resolve, reject) => {
+    // eslint-disable-next-line no-empty-function
+    eventEmitter.on('data', () => {});
+    eventEmitter.on('end', resolve);
+    eventEmitter.on('error', reject);
+  });
+}

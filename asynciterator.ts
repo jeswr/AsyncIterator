@@ -81,12 +81,29 @@ export class AsyncIterator<T> extends EventEmitter {
   private _readable = false;
   protected _properties?: { [name: string]: any };
   protected _propertyCallbacks?: { [name: string]: [(value: any) => void] };
+  protected _sourceStarted: boolean;
+  protected taskBuffer: (() => {})[] = [];
+
+  protected _start() {
+    if (!this._sourceStarted) {
+      this._sourceStarted = true;
+      this.taskBuffer.forEach(task => taskScheduler(task))
+      this.taskBuffer = [];
+    }
+  }
+
+  protected _taskScheduler(task: () => {}) {
+    (this._sourceStarted ? taskScheduler : this.taskBuffer.push)(task);
+  }
 
   /** Creates a new `AsyncIterator`. */
-  constructor(initialState = OPEN) {
+  constructor(initialState = OPEN, autoStart?: boolean) {
     super();
     this._state = initialState;
+    this._sourceStarted = autoStart !== false;
     this.on('newListener', waitForDataListener);
+    if (!this._sourceStarted)
+      this.on('newListener', waitForEndListener);
   }
 
   /**
@@ -538,6 +555,32 @@ function emitData(this: AsyncIterator<any>) {
   }
 }
 
+// @ts-ignore
+function waitForEndListener(this: AsyncIterator<any>, eventName: string) {
+  if (eventName === 'end') {
+    this.removeListener('endListener', waitForEndListener);
+    addSingleListener(this, 'readable', emitEnd);
+    if (this.readable)
+      taskScheduler(() => emitEnd.call(this));
+  }
+}
+
+// Emits new items though `data` events as long as there are `data` listeners
+function emitEnd(this: AsyncIterator<any>) {
+  if (this.listenerCount('end') !== 0) {
+    this.emit('end');
+  } else {
+    this.removeListener('readable', emitEnd);
+    addSingleListener(this, 'endListener', waitForEndListener);
+  }
+    // return;
+  // Stop draining the source if there are no more `data` listeners
+  // if (this.listenerCount('data') === 0 && !this.done) {
+  //   this.removeListener('readable', emitData);
+  //   addSingleListener(this, 'newListener', waitForDataListener);
+  // }
+}
+
 // Adds the listener to the event, if it has not been added previously.
 function addSingleListener(source: EventEmitter, eventName: string,
                            listener: (...args: any[]) => void) {
@@ -552,8 +595,8 @@ function addSingleListener(source: EventEmitter, eventName: string,
 */
 export class EmptyIterator<T> extends AsyncIterator<T> {
   /** Creates a new `EmptyIterator`. */
-  constructor() {
-    super();
+  constructor(autoStart = false) {
+    super(OPEN, autoStart);
     this._changeState(ENDED, true);
   }
 }
