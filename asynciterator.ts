@@ -731,7 +731,7 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
   private _maxBufferSize = 4;
   protected _reading = true;
   protected _pushedCount = 0;
-  protected _sourceStarted;
+  protected _sourceStarted: boolean;
 
   /**
     Creates a new `BufferedIterator`.
@@ -742,7 +742,6 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
   constructor({ maxBufferSize = 4, preBuffer = true } = {}) {
     super(INIT);
     this.maxBufferSize = maxBufferSize;
-    // TODO: See if we can remove this
     this._sourceStarted = preBuffer !== false;
     taskScheduler(() => this._init(this._sourceStarted));
   }
@@ -820,7 +819,8 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
       return null;
 
     // An explicit read kickstarts the source
-    this._sourceStarted ||= true;
+    if (!this._sourceStarted)
+      this._sourceStarted = true;
 
     // Try to retrieve an item from the buffer
     const buffer = this._buffer;
@@ -1673,7 +1673,8 @@ export class ClonedIterator<T> extends TransformIterator<T> {
   /* Tries to read an item */
   read() {
     // An explicit read kickstarts the source
-    this._sourceStarted ||= true;
+    if (!this._sourceStarted)
+      this._sourceStarted = true;
 
     const source = this.source as InternalSource<T>;
     let item = null;
@@ -1690,10 +1691,9 @@ export class ClonedIterator<T> extends TransformIterator<T> {
           this.close();
       }
     }
-    // TODO: Make this more efficient
+
     if (this._state === CLOSED && item === null)
       this._end(false);
-
 
     return item;
   }
