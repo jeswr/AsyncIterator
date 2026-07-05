@@ -5,6 +5,7 @@ import {
   BufferedIterator,
   EmptyIterator,
   ArrayIterator,
+  DESTINATION,
 } from '../dist/asynciterator.js';
 
 import { EventEmitter } from 'events';
@@ -110,13 +111,20 @@ describe('ClonedIterator', () => {
       it('should return an empty property set', () => {
         clone.getProperties().should.deep.equal({});
       });
+
+      it('should destroy a newly added source', () => {
+        const source = new AsyncIterator();
+        sinon.spy(source, 'destroy');
+        clone.source = source;
+        source.destroy.should.have.been.calledOnce;
+      });
     });
   });
 
   describe('Cloning an iterator that already has a destination', () => {
     it('should throw an exception', () => {
       const source = new AsyncIterator(), destination = new TransformIterator(source);
-      source.should.have.property('_destination', destination);
+      source.should.have.property(DESTINATION, destination);
       (() => source.clone()).should.throw('The source already has a destination');
     });
   });
@@ -165,8 +173,8 @@ describe('ClonedIterator', () => {
         });
 
         if (index === 0) {
-          it('should not have emitted the `readable` event', () => {
-            getClone()._eventCounts.readable.should.equal(0);
+          it('should have emitted the `readable` event once', () => {
+            getClone()._eventCounts.readable.should.equal(1);
           });
         }
 
@@ -179,8 +187,8 @@ describe('ClonedIterator', () => {
         });
 
         if (index === 0) {
-          it('should not be readable', () => {
-            getClone().readable.should.be.false;
+          it('should be readable', () => {
+            getClone().readable.should.be.true;
           });
 
           it('should return null on read', () => {
@@ -196,7 +204,7 @@ describe('ClonedIterator', () => {
           before(() => { getIterator()._push('a'); });
 
         it('should have emitted the `readable` event', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.should.equal(index === 0 ? 2 : 1);
         });
 
         it('should not have emitted the `end` event', () => {
@@ -223,7 +231,7 @@ describe('ClonedIterator', () => {
           before(() => { getIterator().close(); });
 
         it('should not have emitted anymore `readable` events', () => {
-          getClone()._eventCounts.readable.should.equal(1);
+          getClone()._eventCounts.readable.should.equal(index === 0 ? 2 : 1);
         });
 
         it('should have emitted the `end` event', () => {
@@ -447,6 +455,49 @@ describe('ClonedIterator', () => {
         });
         describeClones(clones, afterReadingSecond);
       });
+    });
+  });
+
+  describe('Cloning a clone', () => {
+    let iterator, clone;
+    before(() => {
+      iterator = new ArrayIterator([1, 2, 3]);
+      clone = iterator.clone().clone();
+    });
+
+    it('#toArray should run', async () => {
+      expect(await clone.toArray()).to.deep.equal([1, 2, 3]);
+    });
+  });
+
+  describe('Cloning a mapped clone', () => {
+    let iterator, clone;
+    before(() => {
+      iterator = new ArrayIterator([1, 2, 3]);
+      clone = iterator.map(x => x).clone().clone();
+    });
+
+    it('#toArray should run', async () => {
+      expect(await clone.toArray()).to.deep.equal([1, 2, 3]);
+    });
+  });
+
+  describe('Cloning a transformed clone', () => {
+    let iterator, clone;
+    before(() => {
+      iterator = new ArrayIterator([1, 2, 3]);
+      clone = iterator.transform({
+        transform(item, done, push) {
+          setTimeout(() => {
+            push(item);
+            done();
+          }, 1);
+        },
+      }).clone().clone();
+    });
+
+    it('#toArray should run', async () => {
+      expect(await clone.toArray()).to.deep.equal([1, 2, 3]);
     });
   });
 
@@ -700,6 +751,45 @@ describe('ClonedIterator', () => {
 
         it('should be readable', () => {
           getClone().readable.should.be.true;
+        });
+      });
+    });
+  });
+
+  describe('Cloning an iterator without autoStart', () => {
+    const clones = createClones(() => new TransformIterator(() => new ArrayIterator([1], { autoStart: false })));
+
+    describe('before the first item is read', () => {
+      describeClones(clones, getClone => {
+        it('should be readable', () => {
+          getClone().readable.should.be.true;
+        });
+
+        it('should have emitted the `readable` event', () => {
+          getClone()._eventCounts.readable.should.equal(1);
+        });
+      });
+    });
+
+    describe('after the first item is read', () => {
+      describeClones(clones, getClone => {
+        let item;
+        before(() => { item = getClone().read(); });
+
+        it('should have read the item correctly', () => {
+          item.should.equal(1);
+        });
+
+        it('should not be readable', () => {
+          getClone().readable.should.be.false;
+        });
+
+        it('should be done', () => {
+          getClone().done.should.be.true;
+        });
+
+        it('should not have emitted another `readable` event', () => {
+          getClone()._eventCounts.readable.should.equal(1);
         });
       });
     });

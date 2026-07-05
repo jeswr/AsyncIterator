@@ -260,10 +260,102 @@ describe('UnionIterator', () => {
     });
   });
 
+  describe('when constructed with an iterator and with autoStart and one source a promise', () => {
+    let iterator, sourceIterator;
+    before(() => {
+      const sources = [Promise.resolve(range(0, 2)), range(3, 6)];
+      sourceIterator = new ArrayIterator(sources);
+      sinon.spy(sourceIterator, 'read');
+      iterator = new UnionIterator(sourceIterator, { autoStart: true });
+    });
+
+    describe('before reading', () => {
+      it('should have read the sources', () => {
+        sourceIterator.read.should.have.been.called;
+      });
+
+      it('should not have ended', () => {
+        iterator.ended.should.be.false;
+      });
+
+      it('should pass errors', () => {
+        const callback = sinon.spy();
+        const error = new Error('error');
+        iterator.once('error', callback);
+        sourceIterator.emit('error', error);
+        callback.should.have.been.calledOnce;
+        callback.should.have.been.calledWith(error);
+      });
+    });
+
+    describe('after reading', () => {
+      let items;
+      before(async () => {
+        items = (await toArray(iterator)).sort();
+      });
+
+      it('should have emitted all items', () => {
+        items.should.eql([0, 1, 2, 3, 4, 5, 6]);
+      });
+
+      it('should have ended', () => {
+        iterator.ended.should.be.true;
+      });
+    });
+  });
+
   describe('when constructed with an iterator and without autoStart', () => {
     let iterator, sourceIterator;
     before(() => {
       const sources = [range(0, 2), range(3, 6)];
+      sourceIterator = new ArrayIterator(sources);
+      sinon.spy(sourceIterator, 'read');
+      iterator = new UnionIterator(sourceIterator, { autoStart: false });
+    });
+
+    describe('before reading', () => {
+      it('should not have read the sources', () => {
+        sourceIterator.read.should.not.have.been.called;
+      });
+
+      it('should not have ended', () => {
+        iterator.ended.should.be.false;
+      });
+
+      it('should pass errors', () => {
+        const callback = sinon.spy();
+        const error = new Error('error');
+        iterator.once('error', callback);
+        sourceIterator.emit('error', error);
+        callback.should.have.been.calledOnce;
+        callback.should.have.been.calledWith(error);
+      });
+    });
+
+    describe('after reading', () => {
+      let items;
+      before(async () => {
+        items = (await toArray(iterator)).sort();
+      });
+
+      it('should have read the sources', () => {
+        sourceIterator.read.should.have.been.called;
+      });
+
+      it('should have emitted all items', () => {
+        items.should.eql([0, 1, 2, 3, 4, 5, 6]);
+      });
+
+      it('should have ended', () => {
+        iterator.ended.should.be.true;
+      });
+    });
+  });
+
+  describe('when constructed with an iterator and without autoStart and one source as a promise', () => {
+    let iterator, sourceIterator;
+    before(() => {
+      const sources = [Promise.resolve(range(0, 2)), range(3, 6)];
       sourceIterator = new ArrayIterator(sources);
       sinon.spy(sourceIterator, 'read');
       iterator = new UnionIterator(sourceIterator, { autoStart: false });
@@ -349,6 +441,40 @@ describe('UnionIterator', () => {
     it('should make a round-robin union of the data elements', async () => {
       (await toArray(iterator)).sort().should.eql([0, 1, 2, 3, 4, 5, 6]);
     });
+
+    it('should destroy the sources when closing', async () => {
+      iterator.close();
+
+      await new Promise(resolve => iterator.on('end', resolve));
+
+      sources[0].closed.should.be.true;
+      sources[1].closed.should.be.true;
+    });
+  });
+
+  describe('a UnionIterator with two sources without destroySources', () => {
+    let iterator, sources;
+
+    beforeEach(() => {
+      sources = [
+        range(0, 2),
+        range(3, 6),
+      ];
+      iterator = new UnionIterator(sources, { destroySources: false });
+    });
+
+    it('should make a round-robin union of the data elements', async () => {
+      (await toArray(iterator)).sort().should.eql([0, 1, 2, 3, 4, 5, 6]);
+    });
+
+    it('should not destroy the sources when closing', async () => {
+      iterator.close();
+
+      await new Promise(resolve => iterator.on('end', resolve));
+
+      sources[0].closed.should.be.false;
+      sources[1].closed.should.be.false;
+    });
   });
 
   describe('a UnionIterator with sources that are added dynamically', () => {
@@ -429,6 +555,93 @@ describe('UnionIterator', () => {
       it('should have ended', () => {
         expect(iterator.ended).to.be.true;
       });
+    });
+  });
+
+  describe('a UnionIterator with two sources added dynamically with destroySources and without autoStart', () => {
+    let iterator, sources, sourcesIterator;
+
+    beforeEach(() => {
+      sources = [
+        range(0, 2),
+        range(3, 6),
+      ];
+      sourcesIterator = new ArrayIterator(sources, { autoStart: false });
+      iterator = new UnionIterator(sourcesIterator);
+    });
+
+    it('should make a round-robin union of the data elements', async () => {
+      (await toArray(iterator)).sort().should.eql([0, 1, 2, 3, 4, 5, 6]);
+    });
+
+    it('should not destroy the sources when closing', async () => {
+      iterator.close();
+
+      await new Promise(resolve => iterator.on('end', resolve));
+
+      sourcesIterator.closed.should.be.true;
+
+      sources[0].closed.should.be.true;
+      sources[1].closed.should.be.true;
+    });
+  });
+
+  describe('a UnionIterator with two sources added dynamically with destroySources and with autoStart', () => {
+    let iterator, sources, sourcesIterator;
+
+    beforeEach(() => {
+      sources = [
+        range(0, 2),
+        range(3, 6),
+      ];
+      sourcesIterator = new BufferedIterator(sources);
+      sourcesIterator._push(sources[0]);
+      sourcesIterator._push(sources[1]);
+      iterator = new UnionIterator(sourcesIterator);
+    });
+
+    it('should make a round-robin union of the data elements', async () => {
+      sourcesIterator.close();
+      (await toArray(iterator)).sort().should.eql([0, 1, 2, 3, 4, 5, 6]);
+    });
+
+    it('should not destroy the sources when closing', async () => {
+      iterator.close();
+
+      await new Promise(resolve => iterator.on('end', resolve));
+
+      sourcesIterator.closed.should.be.true;
+
+      sources[0].closed.should.be.true;
+      sources[1].closed.should.be.true;
+    });
+  });
+
+  describe('a UnionIterator with two sources added dynamically without destroySources', () => {
+    let iterator, sources, sourcesIterator;
+
+    beforeEach(() => {
+      sources = [
+        range(0, 2),
+        range(3, 6),
+      ];
+      sourcesIterator = new ArrayIterator(sources, { autoStart: false });
+      iterator = new UnionIterator(sourcesIterator, { destroySources: false });
+    });
+
+    it('should make a round-robin union of the data elements', async () => {
+      (await toArray(iterator)).sort().should.eql([0, 1, 2, 3, 4, 5, 6]);
+    });
+
+    it('should not destroy the sources when closing', async () => {
+      iterator.close();
+
+      await new Promise(resolve => iterator.on('end', resolve));
+
+      sourcesIterator.closed.should.be.true;
+
+      sources[0].closed.should.be.false;
+      sources[1].closed.should.be.false;
     });
   });
 

@@ -4,6 +4,10 @@
     node: true,
   },
 
+  globals: {
+    AsyncIterable: false,
+  },
+
   parser: "@typescript-eslint/parser",
 
   parserOptions: {
@@ -20,7 +24,7 @@
 
   rules: {
     // Best Practices
-    accessor-pairs: error,
+    accessor-pairs: off,
     array-callback-return: error,
     block-scoped-var: error,
     class-methods-use-this: off,
@@ -66,7 +70,8 @@
     no-octal-escape: error,
     no-param-reassign: off,
     no-proto: error,
-    no-redeclare: error,
+    no-redeclare: off,
+    "@typescript-eslint/no-redeclare": ["error"],
     no-restricted-properties: error,
     no-return-assign: error,
     no-return-await: error,
@@ -105,9 +110,11 @@
     no-undef: error,
     no-undef-init: error,
     no-undefined: off,
-    no-unused-vars: [ error, { args: none } ],
+    no-unused-vars: off,
     "@typescript-eslint/no-unused-vars": [ error, { args: none } ],
-    no-use-before-define: [ error, { functions: false, classes: false } ],
+    no-use-before-define: off,
+    "@typescript-eslint/no-use-before-define":
+      [ error, { functions: false, classes: false, typedefs: false } ],
 
     // Node.js
     callback-return: off,
@@ -139,7 +146,7 @@
     func-call-spacing: error,
     func-name-matching: error,
     func-names: off,
-    func-style: [ error, declaration ],
+    func-style: [ error, declaration, { allowArrowFunctions: true } ],
     function-paren-newline: off,
     id-blacklist: error,
     id-length: off,

@@ -4,12 +4,16 @@
  */
 
 import { EventEmitter } from 'events';
-import createTaskScheduler from './taskscheduler';
+import { LinkedList } from './linkedlist';
+import { createTaskScheduler } from './taskscheduler';
 import type { Task, TaskScheduler } from './taskscheduler';
 
 let taskScheduler: TaskScheduler = createTaskScheduler();
 
-/** Schedules the given ask for asynchronous execution. */
+// Export utilities for reuse
+export { LinkedList };
+
+/** Schedules the given task for asynchronous execution. */
 export function scheduleTask(task: Task): void {
   taskScheduler(task);
 }
@@ -23,6 +27,7 @@ export function getTaskScheduler(): TaskScheduler {
 export function setTaskScheduler(scheduler: TaskScheduler): void {
   taskScheduler = scheduler;
 }
+
 
 /**
   ID of the INIT state.
@@ -71,12 +76,11 @@ export const ENDED = 1 << 4;
 */
 export const DESTROYED = 1 << 5;
 
-
 /**
   An asynchronous iterator provides pull-based access to a stream of objects.
   @extends module:asynciterator.EventEmitter
 */
-export class AsyncIterator<T> extends EventEmitter {
+export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   protected _state: number;
   private _readable = false;
   protected _properties?: { [name: string]: any };
@@ -160,7 +164,7 @@ export class AsyncIterator<T> extends EventEmitter {
     @param {object?} self The `this` pointer for the callback
   */
   forEach(callback: (item: T) => void, self?: object) {
-    this.on('data', self ? callback.bind(self) : callback);
+    this.on('data', bind(callback, self));
   }
 
   /**
@@ -310,6 +314,35 @@ export class AsyncIterator<T> extends EventEmitter {
   }
 
   /**
+    Consume all remaining items of the iterator into an array that will be returned asynchronously.
+    @param {object} [options] Settings for array creation
+    @param {integer} [options.limit] The maximum number of items to place in the array.
+   */
+  toArray(options?: { limit?: number }): Promise<T[]> {
+    const items: T[] = [];
+    const limit = typeof options?.limit === 'number' ? options.limit : Infinity;
+
+    return this.ended || limit <= 0 ? Promise.resolve(items) : new Promise<T[]>((resolve, reject) => {
+      // Collect and return all items up to the limit
+      const resolveItems = () => resolve(items);
+      const pushItem = (item: T) => {
+        items.push(item);
+        if (items.length >= limit) {
+          this.removeListener('error', reject);
+          this.removeListener('data', pushItem);
+          this.removeListener('end', resolveItems);
+          resolve(items);
+        }
+      };
+
+      // Start item collection
+      this.on('error', reject);
+      this.on('data', pushItem);
+      this.on('end', resolveItems);
+    });
+  }
+
+  /**
     Retrieves the property with the given name from the iterator.
     If no callback is passed, it returns the value of the property
     or `undefined` if the property is not set.
@@ -425,8 +458,8 @@ export class AsyncIterator<T> extends EventEmitter {
     @param {object?} self The `this` pointer for the mapping function
     @returns {module:asynciterator.AsyncIterator} A new iterator that maps the items from this iterator
   */
-  map<D>(map: (item: T) => D, self?: any): AsyncIterator<D> {
-    return this.transform({ map: self ? map.bind(self) : map });
+  map<D>(map: MapFunction<T, D>, self?: any): AsyncIterator<D> {
+    return new MappingIterator(this, bind(map, self));
   }
 
   /**
@@ -439,7 +472,27 @@ export class AsyncIterator<T> extends EventEmitter {
   filter<K extends T>(filter: (item: T) => item is K, self?: any): AsyncIterator<K>;
   filter(filter: (item: T) => boolean, self?: any): AsyncIterator<T>;
   filter(filter: (item: T) => boolean, self?: any): AsyncIterator<T> {
-    return this.transform({ filter: self ? filter.bind(self) : filter });
+    return this.map(function (this: any, item: T) {
+      return filter.call(self || this, item) ? item : null;
+    });
+  }
+
+  /**
+   * Returns a new iterator containing all of the unique items in the original iterator.
+   * @param by - The derived value by which to determine uniqueness (e.g., stringification).
+                 Defaults to the identity function.
+   * @returns An iterator with duplicates filtered out.
+   */
+  uniq(by: (item: T) => any = identity): AsyncIterator<T> {
+    const uniques = new Set();
+    return this.filter(function (this: AsyncIterator<T>, item) {
+      const hashed = by.call(this, item);
+      if (!uniques.has(hashed)) {
+        uniques.add(hashed);
+        return true;
+      }
+      return false;
+    });
   }
 
   /**
@@ -480,7 +533,7 @@ export class AsyncIterator<T> extends EventEmitter {
     @returns {module:asynciterator.AsyncIterator} A new iterator that skips the given number of items
   */
   skip(offset: number): AsyncIterator<T> {
-    return this.transform({ offset });
+    return this.map(item => offset-- > 0 ? null : item);
   }
 
   /**
@@ -513,6 +566,78 @@ export class AsyncIterator<T> extends EventEmitter {
   */
   clone(): ClonedIterator<T> {
     return new ClonedIterator<T>(this);
+  }
+
+  /**
+   * An AsyncIterator is async iterable.
+   * This allows iterators to be used via the for-await syntax.
+   *
+   * In cases where the returned EcmaScript AsyncIterator will not be fully consumed,
+   * it is recommended to manually listen for error events on the main AsyncIterator
+   * to avoid uncaught error messages.
+   *
+   * @returns {ESAsyncIterator<T>} An EcmaScript AsyncIterator
+   */
+  [Symbol.asyncIterator](): ESAsyncIterator<T> {
+    const it = this;
+    let currentResolve: null | Function = null;
+    let currentReject: null | Function = null;
+    let pendingError: null | Error = null;
+
+    it.addListener('readable', tryResolve);
+    it.addListener('end', tryResolve);
+    it.addListener('error', tryReject);
+
+    // Tries to emit an item or signal the end of the iterator
+    function tryResolve(): void {
+      if (currentResolve !== null) {
+        if (pendingError !== null) {
+          tryReject(pendingError);
+        }
+        else if (it.done) {
+          currentResolve({ done: true, value: undefined });
+          currentResolve = currentReject = null;
+          removeListeners();
+        }
+        else {
+          const value = it.read();
+          if (value !== null) {
+            currentResolve({ done: false, value });
+            currentResolve = currentReject = null;
+          }
+        }
+      }
+    }
+
+    // Tries to emit an error
+    function tryReject(error: Error) {
+      if (currentReject !== null) {
+        currentReject(error);
+        currentResolve = currentReject = pendingError = null;
+        removeListeners();
+      }
+      else if (pendingError === null) {
+        pendingError = error;
+      }
+    }
+
+    // Cleans up all attached listeners
+    function removeListeners() {
+      it.removeListener('readable', tryResolve);
+      it.removeListener('end', tryResolve);
+      it.removeListener('error', tryReject);
+    }
+
+    // An EcmaScript AsyncIterator exposes the next() function that can be invoked repeatedly
+    return {
+      next(): Promise<IteratorResult<T>> {
+        return new Promise<IteratorResult<T>>((resolve, reject) => {
+          currentResolve = resolve;
+          currentReject = reject;
+          tryResolve();
+        });
+      },
+    };
   }
 }
 
@@ -600,16 +725,22 @@ export class SingletonIterator<T> extends AsyncIterator<T> {
 */
 export class ArrayIterator<T> extends AsyncIterator<T> {
   private _buffer?: T[];
+  protected _index: number;
   protected _sourceStarted: boolean;
+  protected _truncateThreshold: number;
 
   /**
     Creates a new `ArrayIterator`.
     @param {Array} items The items that will be emitted.
+    @param {boolean} [options.autoStart=true] Whether buffering starts directly after construction
+    @param {boolean} [options.preserve=true] If false, the passed array can be safely modified
   */
-  constructor(items?: Iterable<T>, { autoStart = true } = {}) {
+  constructor(items: Iterable<T> = [], { autoStart = true, preserve = true } = {}) {
     super();
-    const buffer = items ? [...items] : [];
+    const buffer = preserve || !Array.isArray(items) ? [...items] : items;
+    this._index = 0;
     this._sourceStarted = autoStart !== false;
+    this._truncateThreshold = preserve ? -1 : 64;
     if (this._sourceStarted && buffer.length === 0)
       this.close();
     else
@@ -623,13 +754,19 @@ export class ArrayIterator<T> extends AsyncIterator<T> {
       this._sourceStarted = true;
 
     let item = null;
-    const buffer = this._buffer;
-    if (buffer) {
-      if (buffer.length !== 0)
-        item = buffer.shift() as T;
-      if (buffer.length === 0) {
+    if (this._buffer) {
+      // Emit the current item
+      if (this._index < this._buffer.length)
+        item = this._buffer[this._index++];
+      // Close when all elements have been returned
+      if (this._index === this._buffer.length) {
         delete this._buffer;
         this.close();
+      }
+      // Do need keep old items around indefinitely
+      else if (this._index === this._truncateThreshold) {
+        this._buffer.splice(0, this._truncateThreshold);
+        this._index = 0;
       }
     }
     return item;
@@ -637,13 +774,37 @@ export class ArrayIterator<T> extends AsyncIterator<T> {
 
   /* Generates details for a textual representation of the iterator. */
   protected _toStringDetails() {
-    return `(${this._buffer && this._buffer.length || 0})`;
+    return `(${this._buffer ? this._buffer.length - this._index : 0})`;
   }
 
   /* Called by {@link module:asynciterator.AsyncIterator#destroy} */
   protected _destroy(cause: Error | undefined, callback: (error?: Error) => void) {
     delete this._buffer;
     callback();
+  }
+
+  /**
+   Consume all remaining items of the iterator into an array that will be returned asynchronously.
+   @param {object} [options] Settings for array creation
+   @param {integer} [options.limit] The maximum number of items to place in the array.
+   */
+  toArray(options: { limit?: number } = {}): Promise<T[]> {
+    if (!this._buffer)
+      return Promise.resolve([]);
+
+    // Determine start and end index
+    const { length } = this._buffer;
+    const start = this._index;
+    const end = typeof options.limit !== 'number' ? length : start + options.limit;
+
+    // Slice the items off the buffer
+    const items = this._buffer.slice(start, end);
+    this._index = end;
+    // Close this iterator when we're past the end
+    if (end >= length)
+      this.close();
+
+    return Promise.resolve(items);
   }
 }
 
@@ -711,15 +872,108 @@ export class IntegerIterator extends AsyncIterator<number> {
   }
 }
 
+/**
+ * A synchronous mapping function from one element to another.
+ * A return value of `null` means that nothing should be emitted for a particular item.
+ */
+export type MapFunction<S, D = S> = (item: S) => D | null;
+
+/** Function that maps an element to itself. */
+export function identity<S>(item: S): typeof item {
+  return item;
+}
+
+/** Key indicating the current consumer of a source. */
+export const DESTINATION = Symbol('destination');
+
 
 /**
-  A iterator that maintains an internal buffer of items.
+ An iterator that synchronously transforms every item from its source
+ by applying a mapping function.
+ @extends module:asynciterator.AsyncIterator
+*/
+export class MappingIterator<S, D = S> extends AsyncIterator<D> {
+  protected readonly _map: MapFunction<S, D>;
+  protected readonly _source: InternalSource<S>;
+  protected readonly _destroySource: boolean;
+
+  /**
+   * Applies the given mapping to the source iterator.
+   */
+  constructor(
+    source: AsyncIterator<S>,
+    map: MapFunction<S, D> = identity as MapFunction<S, D>,
+    options: SourcedIteratorOptions = {}
+  ) {
+    super();
+    this._map = map;
+    this._source = ensureSourceAvailable(source);
+    this._destroySource = options.destroySource !== false;
+
+    // Close if the source is already empty
+    if (source.done) {
+      this.close();
+    }
+    // Otherwise, wire up the source for reading
+    else {
+      this._source[DESTINATION] = this;
+      this._source.on('end', destinationClose);
+      this._source.on('error', destinationEmitError);
+      this._source.on('readable', destinationSetReadable);
+      this.readable = this._source.readable;
+    }
+  }
+
+  /* Tries to read the next item from the iterator. */
+  read(): D | null {
+    if (!this.done) {
+      // Try to read an item that maps to a non-null value
+      if (this._source.readable) {
+        let item: S | null, mapped: D | null;
+        while ((item = this._source.read()) !== null) {
+          if ((mapped = this._map(item)) !== null)
+            return mapped;
+        }
+      }
+      this.readable = false;
+
+      // Close this iterator if the source is empty
+      if (this._source.done)
+        this.close();
+    }
+    return null;
+  }
+
+  /* Cleans up the source iterator and ends. */
+  protected _end(destroy: boolean) {
+    this._source.removeListener('end', destinationClose);
+    this._source.removeListener('error', destinationEmitError);
+    this._source.removeListener('readable', destinationSetReadable);
+    delete this._source[DESTINATION];
+    if (this._destroySource)
+      this._source.destroy();
+    super._end(destroy);
+  }
+}
+
+// Validates an AsyncIterator for use as a source within another AsyncIterator
+function ensureSourceAvailable<S>(source?: AsyncIterator<S>, allowDestination = false) {
+  if (!source || !isFunction(source.read) || !isFunction(source.on))
+    throw new TypeError(`Invalid source: ${source}`);
+  if (!allowDestination && (source as any)[DESTINATION])
+    throw new Error('The source already has a destination');
+  return source as InternalSource<S>;
+}
+
+
+/**
+  An iterator that maintains an internal buffer of items.
   This class serves as a base class for other iterators
   with a typically complex item generation process.
   @extends module:asynciterator.AsyncIterator
 */
 export class BufferedIterator<T> extends AsyncIterator<T> {
-  private _buffer: T[] = [];
+  private _buffer: LinkedList<T> = new LinkedList<T>();
   private _maxBufferSize = 4;
   protected _reading = true;
   protected _pushedCount = 0;
@@ -731,7 +985,7 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
     @param {integer} [options.maxBufferSize=4] The number of items to preload in the internal buffer
     @param {boolean} [options.autoStart=true] Whether buffering starts directly after construction
   */
-  constructor({ maxBufferSize = 4, autoStart = true } = {}) {
+  constructor({ maxBufferSize = 4, autoStart = true }: BufferedIteratorOptions = {}) {
     super(INIT);
     this.maxBufferSize = maxBufferSize;
     taskScheduler(() => this._init(autoStart));
@@ -817,12 +1071,12 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
     // Try to retrieve an item from the buffer
     const buffer = this._buffer;
     let item;
-    if (buffer.length !== 0) {
-      item = buffer.shift() as T;
-    }
-    else {
+    if (buffer.empty) {
       item = null;
       this.readable = false;
+    }
+    else {
+      item = buffer.shift() as T;
     }
 
     // If the buffer is becoming empty, either fill it or end the iterator
@@ -831,7 +1085,7 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
       if (!this.closed)
         this._fillBufferAsync();
       // No new items will be generated, so if none are buffered, the iterator ends here
-      else if (!buffer.length)
+      else if (buffer.empty)
         this._endAsync();
     }
 
@@ -956,7 +1210,7 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
         this._reading = false;
         // If no items are left, end the iterator
         // Otherwise, `read` becomes responsible for ending the iterator
-        if (!this._buffer.length)
+        if (this._buffer.empty)
           this._endAsync();
       });
     }
@@ -964,7 +1218,7 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
 
   /* Called by {@link module:asynciterator.AsyncIterator#destroy} */
   protected _destroy(cause: Error | undefined, callback: (error?: Error) => void) {
-    this._buffer = [];
+    this._buffer.clear();
     callback();
   }
 
@@ -984,8 +1238,8 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
     @protected
    */
   protected _toStringDetails() {
-    const buffer = this._buffer, { length } = buffer;
-    return `{${length ? `next: ${buffer[0]}, ` : ''}buffer: ${length}}`;
+    const buffer = this._buffer;
+    return `{${buffer.empty ? '' : `next: ${buffer.first}, `}buffer: ${buffer.length}}`;
   }
 }
 
@@ -996,7 +1250,7 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
 */
 export class TransformIterator<S, D = S> extends BufferedIterator<D> {
   protected _source?: InternalSource<S>;
-  protected _createSource?: (() => AsyncIteratorOrPromise<S>) | null;
+  protected _createSource?: (() => MaybePromise<AsyncIterator<S>>) | null;
   protected _destroySource: boolean;
   protected _optional: boolean;
   protected _boundPush = (item: D) => this._push(item);
@@ -1012,8 +1266,7 @@ export class TransformIterator<S, D = S> extends BufferedIterator<D> {
     @param {module:asynciterator.AsyncIterator} [options.source] The source this iterator generates items from
   */
   constructor(source?: SourceExpression<S>,
-              options: TransformIteratorOptions<S> =
-                source as TransformIteratorOptions<S> || {}) {
+              options: TransformIteratorOptions<S> = source as TransformIteratorOptions<S> || {}) {
     super(options);
 
     // Shift parameters if needed
@@ -1047,10 +1300,15 @@ export class TransformIterator<S, D = S> extends BufferedIterator<D> {
   set source(value: AsyncIterator<S> | undefined) {
     // Validate and set source
     const source = this._source = this._validateSource(value);
-    source._destination = this;
+    source[DESTINATION] = this;
 
-    // Close this iterator if the source has already ended
-    if (source.done) {
+    // Do not read the source if this iterator already ended
+    if (this.done) {
+      if (this._destroySource)
+        source.destroy();
+    }
+    // Close this iterator if the source already ended
+    else if (source.done) {
       this.close();
     }
     // Otherwise, react to source events
@@ -1084,14 +1342,10 @@ export class TransformIterator<S, D = S> extends BufferedIterator<D> {
     @param {object} source The source to validate
     @param {boolean} allowDestination Whether the source can already have a destination
   */
-  protected _validateSource(source?: AsyncIterator<S>, allowDestination = false) {
+  protected _validateSource(source?: AsyncIterator<S>, allowDestination = false): InternalSource<S> {
     if (this._source || typeof this._createSource !== 'undefined')
       throw new Error('The source cannot be changed after it has been set');
-    if (!source || !isFunction(source.read) || !isFunction(source.on))
-      throw new Error(`Invalid source: ${source}`);
-    if (!allowDestination && (source as any)._destination)
-      throw new Error('The source already has a destination');
-    return source as InternalSource<S>;
+    return ensureSourceAvailable(source, allowDestination);
   }
 
   /**
@@ -1146,7 +1400,7 @@ export class TransformIterator<S, D = S> extends BufferedIterator<D> {
     @param {function} done To be called when reading is complete
     @param {function} push A callback to push zero or more transformation results.
   */
-  protected _transform(item: S, done: () => void, push: (item: D) => void) {
+  protected _transform(item: S, done: () => void, push: (i: D) => void) {
     push(item as any as D);
     done();
   }
@@ -1166,7 +1420,7 @@ export class TransformIterator<S, D = S> extends BufferedIterator<D> {
       source.removeListener('end', destinationCloseWhenDone);
       source.removeListener('error', destinationEmitError);
       source.removeListener('readable', destinationFillBuffer);
-      delete source._destination;
+      delete source[DESTINATION];
       if (this._destroySource)
         source.destroy();
     }
@@ -1174,15 +1428,21 @@ export class TransformIterator<S, D = S> extends BufferedIterator<D> {
   }
 }
 
+function destinationSetReadable<S>(this: InternalSource<S>) {
+  this[DESTINATION]!.readable = true;
+}
 function destinationEmitError<S>(this: InternalSource<S>, error: Error) {
-  this._destination.emit('error', error);
+  this[DESTINATION]!.emit('error', error);
+}
+function destinationClose<S>(this: InternalSource<S>) {
+  this[DESTINATION]!.close();
 }
 function destinationCloseWhenDone<S>(this: InternalSource<S>) {
-  (this._destination as any)._closeWhenDone();
+  (this[DESTINATION] as any)._closeWhenDone();
 }
 function destinationFillBuffer<S>(this: InternalSource<S>) {
-  if ((this._destination as any)._sourceStarted !== false)
-    (this._destination as any)._fillBuffer();
+  if ((this[DESTINATION] as any)._sourceStarted !== false)
+    (this[DESTINATION] as any)._fillBuffer();
 }
 
 
@@ -1400,7 +1660,7 @@ export class MultiTransformIterator<S, D = S> extends TransformIterator<S, D> {
       // Create the transformer and listen to its events
       const transformer = (this._createTransformer(item) ||
         new EmptyIterator()) as InternalSource<D>;
-      transformer._destination = this;
+      transformer[DESTINATION] = this;
       transformer.on('end', destinationFillBuffer);
       transformer.on('readable', destinationFillBuffer);
       transformer.on('error', destinationEmitError);
@@ -1440,6 +1700,16 @@ export class MultiTransformIterator<S, D = S> extends TransformIterator<S, D> {
     if (!this._transformerQueue.length)
       this.close();
   }
+
+  protected _end(destroy: boolean) {
+    super._end(destroy);
+
+    // Also destroy the open transformers left in the queue
+    if (this._destroySource) {
+      for (const item of this._transformerQueue)
+        item.transformer.destroy();
+    }
+  }
 }
 
 /**
@@ -1448,42 +1718,48 @@ export class MultiTransformIterator<S, D = S> extends TransformIterator<S, D> {
 */
 export class UnionIterator<T> extends BufferedIterator<T> {
   private _sources : InternalSource<T>[] = [];
-  private _pending? : { sources?: AsyncIterator<AsyncIterator<T>> };
+  private _pending? : { loading: boolean, sources?: AsyncIterator<MaybePromise<AsyncIterator<T>>> };
   private _currentSource = -1;
+  protected _destroySources: boolean;
 
   /**
     Creates a new `UnionIterator`.
     @param {module:asynciterator.AsyncIterator|Array} [sources] The sources to read from
     @param {object} [options] Settings of the iterator
+    @param {boolean} [options.destroySource=true] Whether the sources should be destroyed when transformed iterator is closed or destroyed
   */
-  constructor(sources: AsyncIteratorOrArray<AsyncIterator<T>>,
-              options: BufferedIteratorOptions = {}) {
+  constructor(sources: AsyncIteratorOrArray<AsyncIterator<T>> |
+                       AsyncIteratorOrArray<Promise<AsyncIterator<T>>> |
+                       AsyncIteratorOrArray<MaybePromise<AsyncIterator<T>>>,
+              options: BufferedIteratorOptions & { destroySources?: boolean } = {}) {
     super(options);
     const autoStart = options.autoStart !== false;
 
     // Sources have been passed as an iterator
     if (isEventEmitter(sources)) {
       sources.on('error', error => this.emit('error', error));
-      this._pending = { sources };
+      this._pending = { loading: false, sources: sources as AsyncIterator<MaybePromise<AsyncIterator<T>>> };
       if (autoStart)
         this._loadSources();
     }
     // Sources have been passed as a non-empty array
     else if (Array.isArray(sources) && sources.length > 0) {
       for (const source of sources)
-        this._addSource(source as InternalSource<T>);
+        this._addSource(source as MaybePromise<InternalSource<T>>);
     }
     // Sources are an empty list
     else if (autoStart) {
       this.close();
     }
+    // Set other options
+    this._destroySources = options.destroySources !== false;
   }
 
-  // Loads sources passed as an iterator
+  // Loads pending sources into the sources list
   protected _loadSources() {
     // Obtain sources iterator
     const sources = this._pending!.sources!;
-    delete this._pending!.sources;
+    this._pending!.loading = true;
 
     // Close immediately if done
     if (sources.done) {
@@ -1493,7 +1769,7 @@ export class UnionIterator<T> extends BufferedIterator<T> {
     // Otherwise, set up source reading
     else {
       sources.on('data', source => {
-        this._addSource(source as InternalSource<T>);
+        this._addSource(source as MaybePromise<InternalSource<T>>);
         this._fillBufferAsync();
       });
       sources.on('end', () => {
@@ -1504,10 +1780,12 @@ export class UnionIterator<T> extends BufferedIterator<T> {
   }
 
   // Adds the given source to the internal sources array
-  protected _addSource(source: InternalSource<T>) {
+  protected _addSource(source: MaybePromise<InternalSource<T>>) {
+    if (isPromise(source))
+      source = wrap<T>(source) as any as InternalSource<T>;
     if (!source.done) {
       this._sources.push(source);
-      source._destination = this;
+      source[DESTINATION] = this;
       source.on('error', destinationEmitError);
       source.on('readable', destinationFillBuffer);
       source.on('end', destinationRemoveEmptySources);
@@ -1528,7 +1806,7 @@ export class UnionIterator<T> extends BufferedIterator<T> {
   // Reads items from the next sources
   protected _read(count: number, done: () => void): void {
     // Start source loading if needed
-    if (this._pending?.sources)
+    if (this._pending?.loading === false)
       this._loadSources();
 
     // Try to read `count` items
@@ -1552,10 +1830,26 @@ export class UnionIterator<T> extends BufferedIterator<T> {
       this.close();
     done();
   }
+
+  protected _end(destroy: boolean = false) {
+    super._end(destroy);
+
+    // Destroy all sources that are still readable
+    if (this._destroySources) {
+      for (const source of this._sources)
+        source.destroy();
+
+      // Also close the sources stream if applicable
+      if (this._pending) {
+        this._pending!.sources!.destroy();
+        delete this._pending;
+      }
+    }
+  }
 }
 
 function destinationRemoveEmptySources<T>(this: InternalSource<T>) {
-  (this._destination as any)._removeEmptySources();
+  (this[DESTINATION] as any)._removeEmptySources();
 }
 
 
@@ -1573,6 +1867,9 @@ export class ClonedIterator<T> extends TransformIterator<T> {
   constructor(source: AsyncIterator<T>) {
     super(source, { autoStart: false });
     this._reading = false;
+    // As cloned iterators are not auto-started, they must always be marked as readable.
+    if (source)
+      this.readable = true;
   }
 
   protected _init() {
@@ -1593,11 +1890,16 @@ export class ClonedIterator<T> extends TransformIterator<T> {
     // Validate and set the source
     const source = this._source = this._validateSource(value);
     // Create a history reader for the source if none already existed
-    const history = (source && (source as any)._destination) ||
-      (source._destination = new HistoryReader<T>(source) as any);
+    const history = (source && (source as any)[DESTINATION]) ||
+      (source[DESTINATION] = new HistoryReader<T>(source) as any);
 
+    // Do not read the source if this iterator already ended
+    if (this.done) {
+      if (this._destroySource)
+        source.destroy();
+    }
     // Close this clone if history is empty and the source has ended
-    if (history.endsAt(0)) {
+    else if (history.endsAt(0)) {
       this.close();
     }
     else {
@@ -1625,7 +1927,7 @@ export class ClonedIterator<T> extends TransformIterator<T> {
     @param {boolean} allowDestination Whether the source can already have a destination
   */
   protected _validateSource(source?: AsyncIterator<T>, allowDestination = false) {
-    const history = (source && (source as any)._destination);
+    const history = (source && (source as any)[DESTINATION]);
     return super._validateSource(source, !history || history instanceof HistoryReader);
   }
 
@@ -1679,7 +1981,7 @@ export class ClonedIterator<T> extends TransformIterator<T> {
     let item = null;
     if (!this.done && source) {
       // Try to read an item at the current point in history
-      const history = source._destination as any as HistoryReader<T>;
+      const history = source[DESTINATION] as any as HistoryReader<T>;
       if ((item = history.readAt(this._readPosition)) !== null)
         this._readPosition++;
       else
@@ -1695,7 +1997,7 @@ export class ClonedIterator<T> extends TransformIterator<T> {
   protected _end(destroy: boolean) {
     // Unregister from a possible history reader
     const source = this.source as InternalSource<T>;
-    const history = source?._destination as any as HistoryReader<T>;
+    const history = source?.[DESTINATION] as any as HistoryReader<T>;
     if (history)
       history.unregister(this);
 
@@ -1709,34 +2011,36 @@ export class ClonedIterator<T> extends TransformIterator<T> {
 // Stores the history of a source, so it can be cloned
 class HistoryReader<T> {
   private _source: AsyncIterator<T>;
-  private _clones: ClonedIterator<T>[] | null = null;
   private _history: T[] = [];
+  private _trackers: Set<ClonedIterator<T>> = new Set();
 
   constructor(source: AsyncIterator<T>) {
-    // If the source can still emit items, set up cloning
     this._source = source;
+
+    // If the source is still live, set up clone tracking;
+    // otherwise, the clones just read from the finished history
     if (!source.done) {
       // When the source becomes readable, makes all clones readable
       const setReadable = () => {
-        for (const clone of this._clones as ClonedIterator<T>[])
-          clone.readable = true;
+        for (const tracker of this._trackers)
+          tracker.readable = true;
       };
 
       // When the source errors, re-emits the error
       const emitError = (error: Error) => {
-        for (const clone of this._clones as ClonedIterator<T>[])
-          clone.emit('error', error);
+        for (const tracker of this._trackers)
+          tracker.emit('error', error);
       };
 
       // When the source ends, closes all clones that are fully read
       const end = () => {
         // Close the clone if all items had been emitted
-        for (const clone of this._clones as ClonedIterator<T>[]) {
-          if ((clone as any)._sourceStarted !== false &&
-            (clone as any)._readPosition === this._history.length)
-            clone.close();
+        for (const tracker of this._trackers) {
+          if ((tracker as any)._sourceStarted !== false &&
+            (tracker as any)._readPosition === this._history.length)
+            tracker.close();
         }
-        this._clones = null;
+        this._trackers.clear();
 
         // Remove source listeners, since no further events will be emitted
         source.removeListener('end', end);
@@ -1745,7 +2049,6 @@ class HistoryReader<T> {
       };
 
       // Listen to source events to trigger events in subscribed clones
-      this._clones = [];
       source.on('end', end);
       source.on('error', emitError);
       source.on('readable', setReadable);
@@ -1754,14 +2057,14 @@ class HistoryReader<T> {
 
   // Registers a clone for history updates
   register(clone: ClonedIterator<T>) {
-    if (this._clones !== null)
-      this._clones.push(clone);
+    // Tracking is only needed if the source is still live
+    if (!this._source.done)
+      this._trackers.add(clone);
   }
 
   // Unregisters a clone for history updates
   unregister(clone: ClonedIterator<T>) {
-    if (this._clones !== null)
-      this._clones = this._clones.filter(c => c !== clone);
+    this._trackers.delete(clone);
   }
 
   // Tries to read the item at the given history position
@@ -1783,22 +2086,150 @@ class HistoryReader<T> {
 }
 
 /**
+ * An iterator that takes a variety of iterable objects as a source.
+ */
+export class WrappingIterator<T> extends AsyncIterator<T> {
+  protected _source: InternalSource<T> | null = null;
+  protected _destroySource: boolean;
+
+  constructor(source?: MaybePromise<IterableSource<T>>, opts?: SourcedIteratorOptions) {
+    super();
+    this._destroySource = opts?.destroySource !== false;
+
+    // If promise, set up a temporary source and replace when ready
+    if (isPromise(source)) {
+      this._source = new AsyncIterator() as any;
+      source.then(value => {
+        this._source = null;
+        this.source = value;
+      }).catch(error => this.emit('error', error));
+    }
+    // Otherwise, set the source synchronously
+    else if (source) {
+      this.source = source;
+    }
+  }
+
+  set source(value: IterableSource<T>) {
+    let source: InternalSource<T> = value as any;
+    if (this._source !== null)
+      throw new Error('The source cannot be changed after it has been set');
+
+    // Process an iterable source
+    if (isIterable(source))
+      source = source[Symbol.iterator]() as any;
+    // Process an iterator source
+    if (isIterator<T>(source)) {
+      let iterator: Iterator<T> | null = source;
+      source = new EventEmitter() as any;
+      source.read = (): T | null => {
+        if (iterator !== null) {
+          // Skip any null values inside of the iterator
+          let next: IteratorResult<T>;
+          while (!(next = iterator.next()).done) {
+            if (next.value !== null)
+              return next.value;
+          }
+          // No remaining values, so stop iterating
+          iterator = null;
+          this.close();
+        }
+        return null;
+      };
+    }
+    // Process any other readable source
+    else {
+      source = ensureSourceAvailable(source);
+    }
+
+    // Do not change sources if the iterator is already done
+    if (this.done) {
+      if (this._destroySource && isFunction(source.destroy))
+        source.destroy();
+      return;
+    }
+
+    // Set up event handling
+    source[DESTINATION] = this;
+    source.on('end', destinationClose);
+    source.on('error', destinationEmitError);
+    source.on('readable', destinationSetReadable);
+
+    // Enable reading from source
+    this._source = source;
+    this.readable = source.readable !== false;
+  }
+
+  read(): T | null {
+    if (this._source !== null && this._source.readable !== false) {
+      const item = this._source.read();
+      if (item !== null)
+        return item;
+      this.readable = false;
+    }
+    return null;
+  }
+
+  protected _end(destroy: boolean = false) {
+    if (this._source !== null) {
+      this._source.removeListener('end', destinationClose);
+      this._source.removeListener('error', destinationEmitError);
+      this._source.removeListener('readable', destinationSetReadable);
+      delete this._source[DESTINATION];
+
+      if (this._destroySource && isFunction(this._source.destroy))
+        this._source.destroy();
+      this._source = null;
+    }
+    super._end(destroy);
+  }
+}
+
+
+/**
   Creates an iterator that wraps around a given iterator or readable stream.
   Use this to convert an iterator-like object into a full-featured AsyncIterator.
   After this operation, only read the returned iterator instead of the given one.
   @function
-  @param {module:asynciterator.AsyncIterator|Readable} [source] The source this iterator generates items from
+  @param [source] The source this iterator generates items from
   @param {object} [options] Settings of the iterator
   @returns {module:asynciterator.AsyncIterator} A new iterator with the items from the given iterator
 */
-export function wrap<T>(source: EventEmitter | Promise<EventEmitter>, options?: TransformIteratorOptions<T>) {
-  return new TransformIterator<T>(source as AsyncIterator<T> | Promise<AsyncIterator<T>>, options);
+export function wrap<T>(source?: MaybePromise<IterableSource<T>> | null,
+                        options?: TransformIteratorOptions<T>): AsyncIterator<T> {
+  // For backward compatibility, always use TransformIterator when options are specified
+  if (options && ('autoStart' in options || 'optional' in options || 'source' in options || 'maxBufferSize' in options)) {
+    if (source && !isEventEmitter(source))
+      source = new WrappingIterator(source);
+    return new TransformIterator<T>(source as AsyncIterator<T>, options);
+  }
+
+  // Empty iterator if no source specified
+  if (!source)
+    return empty();
+
+  // Unwrap promised sources
+  if (isPromise<T>(source))
+    return new WrappingIterator(source, options);
+
+  // Directly return any AsyncIterator
+  if (source instanceof AsyncIterator)
+    return source;
+
+  // Other iterable objects
+  if (Array.isArray(source))
+    return fromArray<T>(source);
+  if (isIterable(source) || isIterator(source) || isEventEmitter(source))
+    return new WrappingIterator<T>(source, options);
+
+  // Other types are unsupported
+  throw new TypeError(`Invalid source: ${source}`);
 }
 
 /**
   Creates an empty iterator.
  */
-export function empty<T>() {
+export function empty<T>(): AsyncIterator<T> {
   return new EmptyIterator<T>();
 }
 
@@ -1806,7 +2237,7 @@ export function empty<T>() {
   Creates an iterator with a single item.
   @param {object} item the item
  */
-export function single<T>(item: T) {
+export function single<T>(item: T): AsyncIterator<T> {
   return new SingletonIterator<T>(item);
 }
 
@@ -1814,15 +2245,33 @@ export function single<T>(item: T) {
   Creates an iterator for the given array.
   @param {Array} items the items
  */
-export function fromArray<T>(items: Iterable<T>) {
+export function fromArray<T>(items: Iterable<T>): AsyncIterator<T> {
   return new ArrayIterator<T>(items);
+}
+
+/**
+ Creates an iterator for the given Iterator.
+ @param {Iterable} source the iterator
+ */
+export function fromIterator<T>(source: Iterable<T> | Iterator<T>): AsyncIterator<T> {
+  return new WrappingIterator<T>(source);
+}
+
+/**
+ Creates an iterator for the given Iterable.
+ @param {Iterable} source the iterable
+ */
+export function fromIterable<T>(source: Iterable<T> | Iterator<T>): AsyncIterator<T> {
+  return new WrappingIterator<T>(source);
 }
 
 /**
   Creates an iterator containing all items from the given iterators.
   @param {Array} items the items
  */
-export function union<T>(sources: AsyncIteratorOrArray<AsyncIterator<T>>) {
+export function union<T>(sources: AsyncIteratorOrArray<AsyncIterator<T>> |
+                                  AsyncIteratorOrArray<Promise<AsyncIterator<T>>> |
+                                  AsyncIteratorOrArray<MaybePromise<AsyncIterator<T>>>) {
   return new UnionIterator<T>(sources);
 }
 
@@ -1834,24 +2283,15 @@ export function range(start: number, end: number, step?: number) {
   return new IntegerIterator({ start, end, step });
 }
 
-// Determines whether the given object is a function
-function isFunction(object: any): object is Function {
-  return typeof object === 'function';
-}
+export type IterableSource<T> =
+  T[] |
+  AsyncIterator<T> |
+  EventEmitter |
+  Iterator<T> |
+  Iterable<T>;
 
-// Determines whether the given object is an EventEmitter
-function isEventEmitter(object: any): object is EventEmitter {
-  return object && typeof object.on === 'function';
-}
-
-// Determines whether the given object is a promise
-function isPromise<T>(object: any): object is Promise<T> {
-  return object && typeof object.then === 'function';
-}
-
-// Determines whether the given object is a source expression
-function isSourceExpression<T>(object: any): object is SourceExpression<T> {
-  return object && (isEventEmitter(object) || isPromise(object) || isFunction(object));
+export interface SourcedIteratorOptions {
+  destroySource?: boolean;
 }
 
 export interface BufferedIteratorOptions {
@@ -1859,10 +2299,9 @@ export interface BufferedIteratorOptions {
   autoStart?: boolean;
 }
 
-export interface TransformIteratorOptions<S> extends BufferedIteratorOptions {
+export interface TransformIteratorOptions<S> extends SourcedIteratorOptions, BufferedIteratorOptions {
   source?: SourceExpression<S>;
   optional?: boolean;
-  destroySource?: boolean;
 }
 
 export interface TransformOptions<S, D> extends TransformIteratorOptions<S> {
@@ -1873,24 +2312,66 @@ export interface TransformOptions<S, D> extends TransformIteratorOptions<S> {
 
   filter?: (item: S) => boolean;
   map?: (item: S) => D;
-  transform?: (item: S, done: () => void, push: (item: D) => void) => void;
+  transform?: (item: S, done: () => void, push: (i: D) => void) => void;
 }
 
 export interface MultiTransformOptions<S, D> extends TransformOptions<S, D> {
   multiTransform?: (item: S) => AsyncIterator<D>;
 }
 
+/**
+ * Copy of the EcmaScript AsyncIterator interface, which we can not use directly due to the name conflict.
+ */
+interface ESAsyncIterator<T> {
+  next(value?: any): Promise<IteratorResult<T>>;
+}
+
+type MaybePromise<T> =
+  T |
+  Promise<T>;
+
 type AsyncIteratorOrArray<T> =
   T[] |
   AsyncIterator<T>;
 
-type AsyncIteratorOrPromise<T> =
-  AsyncIterator<T> |
-  Promise<AsyncIterator<T>>;
-
 type SourceExpression<T> =
-  AsyncIteratorOrPromise<T> |
-  (() => AsyncIteratorOrPromise<T>);
+  MaybePromise<AsyncIterator<T>> |
+  (() => MaybePromise<AsyncIterator<T>>);
 
 type InternalSource<T> =
-  AsyncIterator<T> & { _destination: AsyncIterator<any> };
+  AsyncIterator<T> & { [DESTINATION]?: AsyncIterator<any> };
+
+// Returns a function that calls `fn` with `self` as `this` pointer. */
+function bind<T extends Function>(fn: T, self?: object): T {
+  return self ? fn.bind(self) : fn;
+}
+
+// Determines whether the given object is a function
+export function isFunction(object: any): object is Function {
+  return typeof object === 'function';
+}
+
+// Determines whether the given object is an EventEmitter
+export function isEventEmitter(object: any): object is EventEmitter {
+  return isFunction(object?.on);
+}
+
+// Determines whether the given object is a promise
+export function isPromise<T>(object: any): object is Promise<T> {
+  return isFunction(object?.then);
+}
+
+// Determines whether the given object is a source expression
+export function isSourceExpression<T>(object: any): object is SourceExpression<T> {
+  return object && (isEventEmitter(object) || isPromise(object) || isFunction(object));
+}
+
+// Determines whether the given object supports the iterable protocol
+export function isIterable<T>(object: { [key: string]: any }): object is Iterable<T> {
+  return object && (Symbol.iterator in object);
+}
+
+// Determines whether the given object supports the iterator protocol
+export function isIterator<T>(object: { [key: string]: any }): object is Iterator<T> {
+  return isFunction(object?.next);
+}
