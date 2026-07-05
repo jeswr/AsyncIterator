@@ -1453,20 +1453,38 @@ describe('AsyncIterator', () => {
 });
 
 describe('The internal job queue', () => {
-  function trapUncaughtException(expectedError, done) {
-    const listeners = process.listeners('uncaughtException');
+  // Temporarily traps the error of a throwing scheduled job.
+  // Depending on how the task scheduler defers tasks,
+  // such an error surfaces as an uncaught exception
+  // (queueMicrotask or setImmediate schedulers)
+  // or as an unhandled promise rejection
+  // (the promise-based fallback on Node 10, which lacks queueMicrotask).
+  function trapJobError(expectedError, done) {
+    const exceptionListeners = process.listeners('uncaughtException');
+    const rejectionListeners = process.listeners('unhandledRejection');
     process.removeAllListeners('uncaughtException');
-    process.once('uncaughtException', error => {
-      for (const listener of listeners)
-        process.on('uncaughtException', listener);
-      try {
-        error.should.equal(expectedError);
-        done();
+    process.removeAllListeners('unhandledRejection');
+    let trapped = false;
+    function onJobError(error) {
+      if (!trapped) {
+        trapped = true;
+        process.removeListener('uncaughtException', onJobError);
+        process.removeListener('unhandledRejection', onJobError);
+        for (const listener of exceptionListeners)
+          process.on('uncaughtException', listener);
+        for (const listener of rejectionListeners)
+          process.on('unhandledRejection', listener);
+        try {
+          error.should.equal(expectedError);
+          done();
+        }
+        catch (assertionError) {
+          done(assertionError);
+        }
       }
-      catch (assertionError) {
-        done(assertionError);
-      }
-    });
+    }
+    process.on('uncaughtException', onJobError);
+    process.on('unhandledRejection', onJobError);
   }
 
   describe('when an event handler of a scheduled job throws', () => {
@@ -1478,7 +1496,7 @@ describe('The internal job queue', () => {
       first.on('end', () => { throw jobError; });
       second.on('end', () => { secondEnded = true; });
 
-      trapUncaughtException(jobError, error => {
+      trapJobError(jobError, error => {
         if (error) {
           done(error);
           return;
@@ -1511,7 +1529,7 @@ describe('The internal job queue', () => {
         throw jobError;
       });
 
-      trapUncaughtException(jobError, error => {
+      trapJobError(jobError, error => {
         if (error) {
           done(error);
           return;
