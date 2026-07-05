@@ -180,6 +180,7 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   protected _state: number;
   private _readable = false;
   protected _emitReadablePending = false;
+  protected _flowing = false;
   protected _properties?: { [name: string]: any };
   protected _propertyCallbacks?: { [name: string]: [(value: any) => void] };
 
@@ -318,6 +319,12 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   protected _end(destroy = false) {
     if (this._changeState(destroy ? DESTROYED : ENDED)) {
       this._readable = false;
+      // Detach the flow-mode bookkeeping hook first,
+      // so the removals below do not emit `removeListener` events
+      if (this._flowing) {
+        this._flowing = false;
+        this.removeListener('removeListener', onRemoveDataListener);
+      }
       this.removeAllListeners('readable');
       this.removeAllListeners('data');
       this.removeAllListeners('end');
@@ -733,6 +740,28 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
     // An EcmaScript AsyncIterator exposes the next() function that can be invoked repeatedly
     return {
       next(): Promise<IteratorResult<T>> {
+        // If no read is pending, try to settle synchronously available results
+        // through already-resolved promises,
+        // avoiding the allocation of a promise executor and its closures
+        if (currentResolve === null) {
+          // Reject with an error that arrived while no read was pending
+          if (pendingError !== null) {
+            const error = pendingError;
+            pendingError = null;
+            removeListeners();
+            return Promise.reject(error);
+          }
+          // Signal the end of the iterator
+          if (it.done) {
+            removeListeners();
+            return Promise.resolve({ done: true, value: undefined });
+          }
+          // Emit an item that is synchronously available
+          const value = it.read();
+          if (value !== null)
+            return Promise.resolve({ done: false, value });
+        }
+        // Await the next item, end, or error asynchronously
         return new Promise<IteratorResult<T>>((resolve, reject) => {
           currentResolve = resolve;
           currentReject = reject;
@@ -748,7 +777,12 @@ function onNewListener(this: AsyncIterator<any>, eventName: string, listener: (.
   // Starts emitting `data` events when `data` listeners are added
   if (eventName === 'data') {
     this.removeListener('newListener', onNewListener);
+    (this as any)._flowing = true;
     addSingleListener(this, 'readable', emitData);
+    // The hook cannot be attached twice:
+    // flow mode is only entered through this listener,
+    // which is only re-armed after the hook has been removed
+    this.on('removeListener', onRemoveDataListener);
     if (this.readable)
       scheduleJob(this, JOB_EMITDATA);
   }
@@ -761,17 +795,26 @@ function onNewListener(this: AsyncIterator<any>, eventName: string, listener: (.
     scheduleJob(this, JOB_EMITREADABLE);
   }
 }
-// Emits new items though `data` events as long as there are `data` listeners
-function emitData(this: AsyncIterator<any>) {
-  // While there are `data` listeners and items, emit them
-  let item;
-  while (this.listenerCount('data') !== 0 && (item = this.read()) !== null)
-    this.emit('data', item);
-  // Stop draining the source if there are no more `data` listeners
-  if (this.listenerCount('data') === 0 && !this.done) {
+// Reacts to `data` listeners being removed from the iterator:
+// when the last one is removed, the iterator leaves flow mode
+function onRemoveDataListener(this: AsyncIterator<any>, eventName: string) {
+  if (eventName === 'data' && (this as any)._flowing &&
+      this.listenerCount('data') === 0) {
+    (this as any)._flowing = false;
     this.removeListener('readable', emitData);
-    addSingleListener(this, 'newListener', onNewListener);
+    this.removeListener('removeListener', onRemoveDataListener);
+    // Wait for `data` listeners again, unless the iterator has ended
+    if (!this.done)
+      addSingleListener(this, 'newListener', onNewListener);
   }
+}
+
+// Emits new items though `data` events as long as the iterator is in flow mode.
+// The `_flowing` flag replaces a `listenerCount('data')` call per emitted item.
+function emitData(this: AsyncIterator<any>) {
+  let item;
+  while ((this as any)._flowing && (item = this.read()) !== null)
+    this.emit('data', item);
 }
 
 // Adds the listener to the event, if it has not been added previously.
