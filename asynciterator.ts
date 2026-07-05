@@ -890,12 +890,23 @@ export const DESTINATION = Symbol('destination');
 /**
  An iterator that synchronously transforms every item from its source
  by applying a mapping function.
+ Chains of synchronous transformations are fused:
+ when a `MappingIterator` is mapped or filtered again,
+ the resulting iterator reads directly from the root source
+ and applies all transformation functions in one call,
+ instead of performing a chain of nested `read` calls.
+ The intermediate iterators remain part of the pipeline
+ for event and lifecycle propagation
+ (`end`, `error`, destruction, and `destroySource` behavior).
  @extends module:asynciterator.AsyncIterator
 */
 export class MappingIterator<S, D = S> extends AsyncIterator<D> {
   protected readonly _map: MapFunction<S, D>;
   protected readonly _source: InternalSource<S>;
   protected readonly _destroySource: boolean;
+  protected readonly _root: InternalSource<any>;
+  protected readonly _chainMaps: MapFunction<any, any>[];
+  protected readonly _chainOwners: AsyncIterator<any>[];
 
   /**
    * Applies the given mapping to the source iterator.
@@ -909,6 +920,23 @@ export class MappingIterator<S, D = S> extends AsyncIterator<D> {
     this._map = map;
     this._source = ensureSourceAvailable(source);
     this._destroySource = options.destroySource !== false;
+
+    // If the source is a mapping iterator with the default read behavior,
+    // fuse both synchronous transformations into a single chain
+    // that reads straight from the root source
+    if (source instanceof MappingIterator &&
+        (source as any).read === MappingIterator.prototype.read &&
+        this.read === MappingIterator.prototype.read) {
+      this._root = source._root;
+      this._chainMaps = [...source._chainMaps, map];
+      this._chainOwners = [...source._chainOwners, this];
+    }
+    // Otherwise, this iterator starts a new chain
+    else {
+      this._root = this._source;
+      this._chainMaps = [map];
+      this._chainOwners = [this];
+    }
 
     // Close if the source is already empty
     if (source.done) {
@@ -928,14 +956,28 @@ export class MappingIterator<S, D = S> extends AsyncIterator<D> {
   read(): D | null {
     if (!this.done) {
       // Try to read an item that maps to a non-null value
-      if (this._source.readable) {
-        let item: S | null, mapped: D | null;
-        while ((item = this._source.read()) !== null) {
-          if ((mapped = this._map(item)) !== null)
-            return mapped;
+      const root = this._root;
+      if (root.readable) {
+        const maps = this._chainMaps, owners = this._chainOwners, { length } = maps;
+        let item: any;
+        while ((item = root.read()) !== null) {
+          // Apply all transformations of the fused chain,
+          // with each function bound to the iterator that created it
+          for (let i = 0; i < length && item !== null; i++)
+            item = maps[i].call(owners[i], item);
+          if (item !== null)
+            return item;
         }
       }
-      this.readable = false;
+      // Mark every iterator of the fused chain as drained,
+      // exactly as a chain of nested read() calls would have.
+      // In particular, intermediate iterators must become unreadable:
+      // otherwise, a later readable signal from the root
+      // would be swallowed by their unchanged readable state,
+      // and never reach the consumers of this iterator.
+      const owners = this._chainOwners;
+      for (let i = 0; i < owners.length; i++)
+        owners[i].readable = false;
 
       // Close this iterator if the source is empty
       if (this._source.done)

@@ -1047,3 +1047,44 @@ describe('MappingIterator', () => {
     });
   });
 });
+
+describe('MappingIterator fused chains', () => {
+  describe('when the root becomes readable again after the chain drained', () => {
+    it('wakes up consumers of the outermost iterator', done => {
+      const root = new AsyncIterator();
+      let buffer = [1, 2];
+      root.read = function () {
+        if (buffer.length === 0) {
+          this.readable = false;
+          return null;
+        }
+        return buffer.shift();
+      };
+      root.readable = true;
+
+      const mapped = root.map(x => x * 10).map(x => x + 1);
+
+      // Drain all currently available items
+      const collected = [];
+      let item;
+      while ((item = mapped.read()) !== null)
+        collected.push(item);
+      collected.should.deep.equal([11, 21]);
+
+      // The `readable` event must reach the outermost iterator,
+      // even though the intermediate iterator is bypassed by fusion
+      mapped.on('readable', () => {
+        const value = mapped.read();
+        if (value !== null) {
+          value.should.equal(31);
+          mapped.destroy();
+          done();
+        }
+      });
+
+      // Make new items available on the root
+      buffer = [3];
+      root.readable = true;
+    });
+  });
+});
