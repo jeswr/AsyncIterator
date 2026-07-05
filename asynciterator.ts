@@ -463,6 +463,25 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   }
 
   /**
+    Maps items from this iterator using an asynchronous mapping function,
+    invoking the function on multiple items concurrently
+    while emitting all results in the order of the source items.
+    After this operation, only read the returned iterator instead of the current one.
+    Because the mapping function is invoked speculatively ahead of emission,
+    it must be side-effect-free and its invocations independent of each other
+    (see {@link module:asynciterator.ParallelTransformIterator}).
+    @param {Function} map An asynchronous mapping function to call on this iterator's (remaining) items
+    @param {object} [options] Settings of the iterator
+    @param {integer} [options.concurrency=4] The maximum number of items to map concurrently
+    @param {object?} self The `this` pointer for the mapping function
+    @returns {module:asynciterator.AsyncIterator} A new iterator that maps the items from this iterator
+  */
+  parallelMap<D>(map: AsyncMapFunction<T, D>, options?: ParallelTransformOptions<T, D>,
+                 self?: any): AsyncIterator<D> {
+    return new ParallelTransformIterator<T, D>(this, { ...options, map: bind(map, self) });
+  }
+
+  /**
     Return items from this iterator that match the filter.
     After this operation, only read the returned iterator instead of the current one.
     @param {Function} filter A filter function to call on this iterator's (remaining) items
@@ -877,6 +896,12 @@ export class IntegerIterator extends AsyncIterator<number> {
  * A return value of `null` means that nothing should be emitted for a particular item.
  */
 export type MapFunction<S, D = S> = (item: S) => D | null;
+
+/**
+ * An asynchronous mapping function from one element to another.
+ * A (promise of a) return value of `null` means that nothing should be emitted for a particular item.
+ */
+export type AsyncMapFunction<S, D = S> = (item: S) => MaybePromise<D | null>;
 
 /** Function that maps an element to itself. */
 export function identity<S>(item: S): typeof item {
@@ -1712,6 +1737,177 @@ export class MultiTransformIterator<S, D = S> extends TransformIterator<S, D> {
   }
 }
 
+// Tracks an in-flight asynchronous mapping of a source item
+interface MapSlot<S, D> {
+  item: S;
+  settled: boolean;
+  value: D | null;
+  error: Error | null;
+}
+
+/**
+  An iterator that maps items from a source
+  by invoking an asynchronous mapping function
+  on multiple items concurrently,
+  while emitting all results in the order of the source items.
+  Because the mapping function is invoked speculatively
+  ahead of the item that is next in line for emission,
+  it can be invoked for items that are never emitted,
+  for instance, when the iterator is closed or destroyed early,
+  or when the mapping of a preceding item results in an error.
+  The mapping function must therefore be side-effect-free,
+  and its invocations independent of each other.
+  @extends module:asynciterator.TransformIterator
+*/
+export class ParallelTransformIterator<S, D = S> extends TransformIterator<S, D> {
+  protected _map: AsyncMapFunction<S, D> = identity as AsyncMapFunction<S, D>;
+  private _concurrency = 4;
+  private readonly _slots: LinkedList<MapSlot<S, D>> = new LinkedList();
+
+  /**
+    Creates a new `ParallelTransformIterator`.
+    @param {module:asynciterator.AsyncIterator|Readable} [source] The source this iterator generates items from
+    @param {object|Function} [options] Settings of the iterator, or the asynchronous mapping function
+    @param {integer} [options.maxBufferSize=4] The maximum number of items to keep in the buffer
+    @param {boolean} [options.autoStart=true] Whether buffering starts directly after construction
+    @param {boolean} [options.optional=false] If mapping is optional, the original item is pushed when its mapping yields `null`
+    @param {boolean} [options.destroySource=true] Whether the source should be destroyed when this transformed iterator is closed or destroyed
+    @param {module:asynciterator.AsyncIterator} [options.source] The source this iterator generates items from
+    @param {Function} [options.map] An asynchronous function to map items from the source
+    @param {integer} [options.concurrency=4] The maximum number of items to map concurrently
+  */
+  constructor(source?: SourceExpression<S>,
+              options?: ParallelTransformOptions<S, D> |
+                        ParallelTransformOptions<S, D> & AsyncMapFunction<S, D>) {
+    super(source, options as TransformIteratorOptions<S>);
+
+    // Set the mapping steps from the options
+    options = options || (!isSourceExpression(source) ? source : null as any);
+    if (options) {
+      const map = isFunction(options) ? options : options.map;
+      if (isFunction(map))
+        this._map = map;
+      if (typeof options.concurrency === 'number')
+        this.concurrency = options.concurrency;
+    }
+  }
+
+  /**
+    The maximum number of items being mapped concurrently.
+    Together with `maxBufferSize`, this determines
+    how far ahead of consumption the source is read:
+    up to `concurrency` items are being mapped
+    on top of the already mapped items in the buffer.
+    Set to `Infinity` to map all available source items simultaneously.
+    @type number
+  */
+  get concurrency() {
+    return this._concurrency;
+  }
+
+  set concurrency(concurrency) {
+    // Allow only positive integers and infinity
+    if (concurrency !== Infinity) {
+      concurrency = !Number.isFinite(concurrency) ? 4 :
+        Math.max(Math.trunc(concurrency), 1);
+    }
+    // Only set the concurrency if it changes
+    if (this._concurrency !== concurrency) {
+      this._concurrency = concurrency;
+      // Ensure sufficient items are being mapped
+      if (this._state === OPEN)
+        this._fillBuffer();
+    }
+  }
+
+  /* Tries to read and map items in parallel */
+  protected _read(count: number, done: () => void) {
+    const slots = this._slots;
+    const { source } = this;
+    let slot: MapSlot<S, D> | undefined, item: S | null;
+    do {
+      // Emit results of settled mappings, in source order
+      while (this._pushedCount < count && (slot = slots.first) && slot.settled) {
+        slots.shift();
+        // Emit a mapping error at the position of the item that caused it
+        if (slot.error !== null)
+          this.emit('error', slot.error);
+        // Skip `null` results, pushing the original item if mapping was optional
+        else if (slot.value !== null)
+          this._push(slot.value);
+        else if (this._optional)
+          this._push(slot.item as any as D);
+      }
+      // Start mapping new items until the concurrency limit is reached
+      item = null;
+      if (!this.closed && source && !source.done) {
+        while (slots.length < this._concurrency && (item = source.read()) !== null)
+          this._mapItem(item);
+      }
+      // Keep emitting if mappings have settled synchronously in the meantime
+    } while (this._pushedCount < count && (slot = slots.first) && slot.settled);
+
+    // Close when the source has ended and all results have been emitted
+    if (source && source.done && slots.empty)
+      this.close();
+    done();
+  }
+
+  /**
+    Starts the asynchronous mapping of the given item,
+    reserving a slot for its result so all results can be emitted in source order.
+    @protected
+    @param {object} item The item to map
+  */
+  protected _mapItem(item: S) {
+    const slot: MapSlot<S, D> = { item, settled: false, value: null, error: null };
+    this._slots.push(slot);
+    // Invoke the mapping function, capturing synchronous errors
+    let result;
+    try {
+      result = this._map(item);
+    }
+    catch (error) {
+      this._settleSlot(slot, null, error as Error);
+      return;
+    }
+    // Settle the slot as soon as the mapping settles
+    if (isPromise<D | null>(result)) {
+      result.then(
+        value => this._settleSlot(slot, value, null),
+        error => this._settleSlot(slot, null, error));
+    }
+    else {
+      this._settleSlot(slot, result, null);
+    }
+  }
+
+  // Stores the mapping result in its slot, and schedules emission if it is next in line
+  private _settleSlot(slot: MapSlot<S, D>, value: D | null, error: Error | null) {
+    slot.value = value;
+    slot.error = error;
+    slot.settled = true;
+    // If this result is the next to be emitted, resume filling the buffer
+    if (!this.done && this._slots.first === slot)
+      this._fillBufferAsync();
+  }
+
+  /* Closes the iterator when pending mappings are emitted. */
+  protected _closeWhenDone() {
+    // Only close when no mapping results are pending
+    if (this._slots.empty)
+      this.close();
+  }
+
+  /* Called by {@link module:asynciterator.AsyncIterator#destroy} */
+  protected _destroy(cause: Error | undefined, callback: (error?: Error) => void) {
+    // Void the results of in-flight mappings
+    this._slots.clear();
+    super._destroy(cause, callback);
+  }
+}
+
+
 /**
   An iterator that generates items by reading from multiple other iterators.
   @extends module:asynciterator.BufferedIterator
@@ -2317,6 +2513,11 @@ export interface TransformOptions<S, D> extends TransformIteratorOptions<S> {
 
 export interface MultiTransformOptions<S, D> extends TransformOptions<S, D> {
   multiTransform?: (item: S) => AsyncIterator<D>;
+}
+
+export interface ParallelTransformOptions<S, D> extends TransformIteratorOptions<S> {
+  map?: AsyncMapFunction<S, D>;
+  concurrency?: number;
 }
 
 /**
