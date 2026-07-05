@@ -382,19 +382,23 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   setProperty<P>(propertyName: string, value: P) {
     const properties = this._properties || (this._properties = Object.create(null));
     properties[propertyName] = value;
-    // Execute getter callbacks that were waiting for this property to be set
-    const propertyCallbacks = this._propertyCallbacks || {};
-    const callbacks = propertyCallbacks[propertyName];
-    if (callbacks) {
-      delete propertyCallbacks[propertyName];
-      taskScheduler(() => {
-        for (const callback of callbacks)
-          callback(value);
-      });
-      // Remove _propertyCallbacks if no pending callbacks are left
-      for (propertyName in propertyCallbacks)
-        return;
-      delete this._propertyCallbacks;
+    // Execute getter callbacks that were waiting for this property to be set;
+    // note that `_propertyCallbacks` is only checked, not allocated,
+    // as this is a hot path for iterators carrying metadata
+    const propertyCallbacks = this._propertyCallbacks;
+    if (propertyCallbacks) {
+      const callbacks = propertyCallbacks[propertyName];
+      if (callbacks) {
+        delete propertyCallbacks[propertyName];
+        taskScheduler(() => {
+          for (const callback of callbacks)
+            callback(value);
+        });
+        // Remove _propertyCallbacks if no pending callbacks are left
+        for (propertyName in propertyCallbacks)
+          return;
+        delete this._propertyCallbacks;
+      }
     }
   }
 
