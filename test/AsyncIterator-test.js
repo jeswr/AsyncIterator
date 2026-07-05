@@ -1452,6 +1452,86 @@ describe('AsyncIterator', () => {
   });
 });
 
+describe('The internal job queue', () => {
+  function trapUncaughtException(expectedError, done) {
+    const listeners = process.listeners('uncaughtException');
+    process.removeAllListeners('uncaughtException');
+    process.once('uncaughtException', error => {
+      for (const listener of listeners)
+        process.on('uncaughtException', listener);
+      try {
+        error.should.equal(expectedError);
+        done();
+      }
+      catch (assertionError) {
+        done(assertionError);
+      }
+    });
+  }
+
+  describe('when an event handler of a scheduled job throws', () => {
+    it('still executes jobs that were already scheduled', done => {
+      const first = new AsyncIterator();
+      const second = new AsyncIterator();
+      const jobError = new Error('job error');
+      let secondEnded = false;
+      first.on('end', () => { throw jobError; });
+      second.on('end', () => { secondEnded = true; });
+
+      trapUncaughtException(jobError, error => {
+        if (error) {
+          done(error);
+          return;
+        }
+        // The end of the second iterator must still be processed
+        scheduleTask(() => scheduleTask(() => {
+          try {
+            secondEnded.should.equal(true);
+            done();
+          }
+          catch (assertionError) {
+            done(assertionError);
+          }
+        }));
+      });
+
+      first.close();
+      second.close();
+    });
+
+    it('still executes jobs that the throwing job scheduled', done => {
+      const first = new AsyncIterator();
+      const second = new AsyncIterator();
+      const jobError = new Error('job error');
+      let secondEnded = false;
+      second.on('end', () => { secondEnded = true; });
+      first.on('end', () => {
+        // Schedule another job before throwing
+        second.close();
+        throw jobError;
+      });
+
+      trapUncaughtException(jobError, error => {
+        if (error) {
+          done(error);
+          return;
+        }
+        scheduleTask(() => scheduleTask(() => {
+          try {
+            secondEnded.should.equal(true);
+            done();
+          }
+          catch (assertionError) {
+            done(assertionError);
+          }
+        }));
+      });
+
+      first.close();
+    });
+  });
+});
+
 describe('Type-checking functions', () => {
   describe('isPromise', () => {
     it('returns false for null', () => {
