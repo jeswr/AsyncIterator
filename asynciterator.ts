@@ -28,6 +28,102 @@ export function setTaskScheduler(scheduler: TaskScheduler): void {
   taskScheduler = scheduler;
 }
 
+// Internal job queue.
+//
+// Iterators frequently schedule small units of asynchronous work:
+// emitting a `readable` or `end` event, ending an iterator,
+// starting a buffer fill, etc.
+// Passing a fresh closure per unit of work to the task scheduler
+// is costly: every closure is an allocation,
+// and every `queueMicrotask` call internally allocates an `AsyncResource`.
+//
+// Instead, jobs are pushed as (iterator, jobKind) pairs
+// onto a shared queue that is drained by a single scheduled task.
+// Jobs run in exactly the order in which they were scheduled.
+// Jobs scheduled while the queue is draining
+// are processed in a follow-up task,
+// so the task scheduler's starvation protection remains effective.
+const JOB_EMITREADABLE = 0;
+const JOB_EMITEND = 1;
+const JOB_END = 2;
+const JOB_EMITDATA = 3;
+const JOB_INIT = 4;
+const JOB_FILLBUFFER = 5;
+
+const jobIterators: any[] = [];
+const jobKinds: number[] = [];
+let jobHead = 0;
+let jobDrainScheduled = false;
+
+function scheduleJob(iterator: any, kind: number): void {
+  jobIterators.push(iterator);
+  jobKinds.push(kind);
+  if (!jobDrainScheduled) {
+    jobDrainScheduled = true;
+    taskScheduler(drainJobs);
+  }
+}
+
+function runJob(iterator: any, kind: number): void {
+  switch (kind) {
+  case JOB_EMITREADABLE:
+    iterator._emitReadablePending = false;
+    iterator.emit('readable');
+    break;
+  case JOB_EMITEND:
+    iterator.emit('end');
+    break;
+  case JOB_END:
+    iterator._end();
+    break;
+  case JOB_EMITDATA:
+    emitData.call(iterator);
+    break;
+  case JOB_INIT:
+    iterator._init(iterator._initAutoStart);
+    break;
+  default:
+    iterator._reading = false;
+    iterator._fillBuffer();
+    break;
+  }
+}
+
+function drainJobs(): void {
+  // Unlock scheduling upfront, such that jobs scheduled by the jobs below
+  // claim a new drain task at their actual scheduling time.
+  // This keeps every job in submission order relative to
+  // any other tasks passed to the task scheduler.
+  jobDrainScheduled = false;
+  // Only process jobs that were queued before this drain started;
+  // jobs queued during this drain are processed by their own drain task
+  const count = jobIterators.length;
+  let i = jobHead;
+  try {
+    for (; i < count; i++) {
+      const iterator = jobIterators[i];
+      jobIterators[i] = null;
+      runJob(iterator, jobKinds[i]);
+    }
+  }
+  finally {
+    // Mark all jobs as processed, including a possibly throwing one
+    jobHead = i < count ? i + 1 : count;
+    // If all jobs have been processed, empty the queue;
+    // array truncation via `length` does not allocate, unlike `splice`
+    if (jobHead === jobIterators.length) {
+      jobIterators.length = 0;
+      jobKinds.length = 0;
+      jobHead = 0;
+    }
+    // If a job threw, ensure a drain task exists for unprocessed jobs
+    else if (!jobDrainScheduled) {
+      jobDrainScheduled = true;
+      taskScheduler(drainJobs);
+    }
+  }
+}
+
 
 /**
   ID of the INIT state.
@@ -83,6 +179,8 @@ export const DESTROYED = 1 << 5;
 export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   protected _state: number;
   private _readable = false;
+  protected _emitReadablePending = false;
+  protected _flowing = false;
   protected _properties?: { [name: string]: any };
   protected _propertyCallbacks?: { [name: string]: [(value: any) => void] };
 
@@ -90,7 +188,7 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   constructor(initialState = OPEN) {
     super();
     this._state = initialState;
-    this.on('newListener', waitForDataListener);
+    this.on('newListener', onNewListener);
   }
 
   /**
@@ -112,7 +210,7 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
         if (!eventAsync)
           this.emit('end');
         else
-          taskScheduler(() => this.emit('end'));
+          scheduleJob(this, JOB_EMITEND);
       }
     }
     return valid;
@@ -221,6 +319,12 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   protected _end(destroy = false) {
     if (this._changeState(destroy ? DESTROYED : ENDED)) {
       this._readable = false;
+      // Detach the flow-mode bookkeeping hook first,
+      // so the removals below do not emit `removeListener` events
+      if (this._flowing) {
+        this._flowing = false;
+        this.removeListener('removeListener', onRemoveDataListener);
+      }
       this.removeAllListeners('readable');
       this.removeAllListeners('data');
       this.removeAllListeners('end');
@@ -232,7 +336,7 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
     @protected
   */
   protected _endAsync() {
-    taskScheduler(() => this._end());
+    scheduleJob(this, JOB_END);
   }
 
   /**
@@ -256,9 +360,14 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
     // Set the readable value only if it has changed
     if (this._readable !== readable) {
       this._readable = readable;
-      // If the iterator became readable, emit the `readable` event
-      if (readable)
-        taskScheduler(() => this.emit('readable'));
+      // If the iterator became readable, emit the `readable` event.
+      // Without `readable` listeners, emission is skipped:
+      // a `readable` listener that is attached later
+      // is served by the `newListener` hook instead.
+      if (readable && this.listenerCount('readable') !== 0) {
+        this._emitReadablePending = true;
+        scheduleJob(this, JOB_EMITREADABLE);
+      }
     }
   }
 
@@ -631,6 +740,28 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
     // An EcmaScript AsyncIterator exposes the next() function that can be invoked repeatedly
     return {
       next(): Promise<IteratorResult<T>> {
+        // If no read is pending, try to settle synchronously available results
+        // through already-resolved promises,
+        // avoiding the allocation of a promise executor and its closures
+        if (currentResolve === null) {
+          // Reject with an error that arrived while no read was pending
+          if (pendingError !== null) {
+            const error = pendingError;
+            pendingError = null;
+            removeListeners();
+            return Promise.reject(error);
+          }
+          // Signal the end of the iterator
+          if (it.done) {
+            removeListeners();
+            return Promise.resolve({ done: true, value: undefined });
+          }
+          // Emit an item that is synchronously available
+          const value = it.read();
+          if (value !== null)
+            return Promise.resolve({ done: false, value });
+        }
+        // Await the next item, end, or error asynchronously
         return new Promise<IteratorResult<T>>((resolve, reject) => {
           currentResolve = resolve;
           currentReject = reject;
@@ -641,26 +772,49 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
   }
 }
 
-// Starts emitting `data` events when `data` listeners are added
-function waitForDataListener(this: AsyncIterator<any>, eventName: string) {
+// Reacts to listeners being attached to the iterator
+function onNewListener(this: AsyncIterator<any>, eventName: string, listener: (...args: any[]) => void) {
+  // Starts emitting `data` events when `data` listeners are added
   if (eventName === 'data') {
-    this.removeListener('newListener', waitForDataListener);
+    this.removeListener('newListener', onNewListener);
+    (this as any)._flowing = true;
     addSingleListener(this, 'readable', emitData);
+    // The hook cannot be attached twice:
+    // flow mode is only entered through this listener,
+    // which is only re-armed after the hook has been removed
+    this.on('removeListener', onRemoveDataListener);
     if (this.readable)
-      taskScheduler(() => emitData.call(this));
+      scheduleJob(this, JOB_EMITDATA);
+  }
+  // Since `readable` events are only scheduled when listeners are present,
+  // an iterator that became readable earlier
+  // signals its readability to newly attached listeners
+  else if (eventName === 'readable' && listener !== emitData &&
+           this.readable && !(this as any)._emitReadablePending) {
+    (this as any)._emitReadablePending = true;
+    scheduleJob(this, JOB_EMITREADABLE);
   }
 }
-// Emits new items though `data` events as long as there are `data` listeners
-function emitData(this: AsyncIterator<any>) {
-  // While there are `data` listeners and items, emit them
-  let item;
-  while (this.listenerCount('data') !== 0 && (item = this.read()) !== null)
-    this.emit('data', item);
-  // Stop draining the source if there are no more `data` listeners
-  if (this.listenerCount('data') === 0 && !this.done) {
+// Reacts to `data` listeners being removed from the iterator:
+// when the last one is removed, the iterator leaves flow mode
+function onRemoveDataListener(this: AsyncIterator<any>, eventName: string) {
+  if (eventName === 'data' && (this as any)._flowing &&
+      this.listenerCount('data') === 0) {
+    (this as any)._flowing = false;
     this.removeListener('readable', emitData);
-    addSingleListener(this, 'newListener', waitForDataListener);
+    this.removeListener('removeListener', onRemoveDataListener);
+    // Wait for `data` listeners again, unless the iterator has ended
+    if (!this.done)
+      addSingleListener(this, 'newListener', onNewListener);
   }
+}
+
+// Emits new items though `data` events as long as the iterator is in flow mode.
+// The `_flowing` flag replaces a `listenerCount('data')` call per emitted item.
+function emitData(this: AsyncIterator<any>) {
+  let item;
+  while ((this as any)._flowing && (item = this.read()) !== null)
+    this.emit('data', item);
 }
 
 // Adds the listener to the event, if it has not been added previously.
@@ -979,6 +1133,7 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
   protected _reading = true;
   protected _pushedCount = 0;
   protected _sourceStarted: boolean;
+  protected _initAutoStart = true;
 
   /**
     Creates a new `BufferedIterator`.
@@ -989,7 +1144,8 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
   constructor({ maxBufferSize = 4, autoStart = true }: BufferedIteratorOptions = {}) {
     super(INIT);
     this.maxBufferSize = maxBufferSize;
-    taskScheduler(() => this._init(autoStart));
+    this._initAutoStart = autoStart;
+    scheduleJob(this, JOB_INIT);
     this._sourceStarted = autoStart !== false;
   }
 
@@ -1167,14 +1323,11 @@ export class BufferedIterator<T> extends AsyncIterator<T> {
     Schedules `_fillBuffer` asynchronously.
   */
   protected _fillBufferAsync() {
-    // Acquire reading lock to avoid recursive reads
+    // Acquire reading lock to avoid recursive reads;
+    // the scheduled job releases the lock and calls `_fillBuffer`
     if (!this._reading) {
       this._reading = true;
-      taskScheduler(() => {
-        // Release reading lock so _fillBuffer` can take it
-        this._reading = false;
-        this._fillBuffer();
-      });
+      scheduleJob(this, JOB_FILLBUFFER);
     }
   }
 
