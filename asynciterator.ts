@@ -394,7 +394,7 @@ export class AsyncIterator<T> extends EventEmitter implements AsyncIterable<T> {
       // Remove _propertyCallbacks if no pending callbacks are left
       for (propertyName in propertyCallbacks)
         return;
-      delete this._propertyCallbacks;
+      this._propertyCallbacks = undefined;
     }
   }
 
@@ -760,7 +760,8 @@ export class ArrayIterator<T> extends AsyncIterator<T> {
         item = this._buffer[this._index++];
       // Close when all elements have been returned
       if (this._index === this._buffer.length) {
-        delete this._buffer;
+        // Assign instead of `delete` to keep the object's hidden class stable
+        this._buffer = undefined;
         this.close();
       }
       // Do need keep old items around indefinitely
@@ -779,7 +780,7 @@ export class ArrayIterator<T> extends AsyncIterator<T> {
 
   /* Called by {@link module:asynciterator.AsyncIterator#destroy} */
   protected _destroy(cause: Error | undefined, callback: (error?: Error) => void) {
-    delete this._buffer;
+    this._buffer = undefined;
     callback();
   }
 
@@ -949,7 +950,7 @@ export class MappingIterator<S, D = S> extends AsyncIterator<D> {
     this._source.removeListener('end', destinationClose);
     this._source.removeListener('error', destinationEmitError);
     this._source.removeListener('readable', destinationSetReadable);
-    delete this._source[DESTINATION];
+    this._source[DESTINATION] = undefined;
     if (this._destroySource)
       this._source.destroy();
     super._end(destroy);
@@ -1327,7 +1328,7 @@ export class TransformIterator<S, D = S> extends BufferedIterator<D> {
     if (isFunction(this._createSource)) {
       // Assign the source after resolving
       Promise.resolve(this._createSource()).then(source => {
-        delete this._createSource;
+        this._createSource = undefined;
         this.source = source;
         this._fillBuffer();
       }, error => this.emit('error', error));
@@ -1420,7 +1421,7 @@ export class TransformIterator<S, D = S> extends BufferedIterator<D> {
       source.removeListener('end', destinationCloseWhenDone);
       source.removeListener('error', destinationEmitError);
       source.removeListener('readable', destinationFillBuffer);
-      delete source[DESTINATION];
+      source[DESTINATION] = undefined;
       if (this._destroySource)
         source.destroy();
     }
@@ -1565,13 +1566,13 @@ export class SimpleTransformIterator<S, D = S> extends TransformIterator<S, D> {
   // Prepends items to the iterator
   protected _begin(done: () => void) {
     this._insert(this._prepender, done);
-    delete this._prepender;
+    this._prepender = undefined;
   }
 
   // Appends items to the iterator
   protected _flush(done: () => void) {
     this._insert(this._appender, done);
-    delete this._appender;
+    this._appender = undefined;
   }
 
   // Inserts items in the iterator
@@ -1763,7 +1764,7 @@ export class UnionIterator<T> extends BufferedIterator<T> {
 
     // Close immediately if done
     if (sources.done) {
-      delete this._pending;
+      this._pending = undefined;
       this.close();
     }
     // Otherwise, set up source reading
@@ -1773,7 +1774,7 @@ export class UnionIterator<T> extends BufferedIterator<T> {
         this._fillBufferAsync();
       });
       sources.on('end', () => {
-        delete this._pending;
+        this._pending = undefined;
         this._fillBuffer();
       });
     }
@@ -1842,7 +1843,7 @@ export class UnionIterator<T> extends BufferedIterator<T> {
       // Also close the sources stream if applicable
       if (this._pending) {
         this._pending!.sources!.destroy();
-        delete this._pending;
+        this._pending = undefined;
       }
     }
   }
@@ -2175,7 +2176,7 @@ export class WrappingIterator<T> extends AsyncIterator<T> {
       this._source.removeListener('end', destinationClose);
       this._source.removeListener('error', destinationEmitError);
       this._source.removeListener('readable', destinationSetReadable);
-      delete this._source[DESTINATION];
+      this._source[DESTINATION] = undefined;
 
       if (this._destroySource && isFunction(this._source.destroy))
         this._source.destroy();
